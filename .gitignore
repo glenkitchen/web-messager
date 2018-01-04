@@ -1,0 +1,4 @@
+/.vscode
+/karma_html
+/node_modules
+package-lock.json

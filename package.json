@@ -1,0 +1,40 @@
+{
+  "name": "web-messager",
+  "version": "1.0.0",
+  "description": "Helper library for web messaging i.e. window.postMessage()",
+  "main": "index.js",
+  "bin": {
+    "web-messager": "messager.js"
+  },
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/glenkitchen/web-messager.git"
+  },
+  "keywords": [
+    "message",
+    "postMessage",
+    "iframe"
+  ],
+  "author": "Glen Kitchen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/glenkitchen/web-messager/issues"
+  },
+  "homepage": "https://github.com/glenkitchen/web-messager#readme",
+  "devDependencies": {
+    "@types/jasmine": "^2.8.3",
+    "jasmine": "^2.8.0",
+    "jasmine-core": "^2.8.0",
+    "karma": "^2.0.0",
+    "karma-chrome-launcher": "^2.2.0",
+    "karma-html-reporter": "^0.2.7",
+    "karma-jasmine": "^1.1.1"
+  },
+  "dependencies": {}
+}

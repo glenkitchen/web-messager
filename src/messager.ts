@@ -23,22 +23,35 @@ interface MessagerOptions {
     targetOrigin: string
 }
 
+/**
+ * 
+ */
 enum MessageType {
     Request = 'REQUEST',
     Response = 'RESPONSE'
 }
 
+/**
+ * Helper library for web messaging i.e. window.postMessage() 
+ * 
+ * JSON message structure:
+ * 
+ * Request-response roundtrip: 
+ *  
+ */
 class Messager {
 
     private window: Window;
     private origin: string;
     private targetOrigin: string;
-
     private promises = new Map();
-
     private requestCallbacks = new Map();
     private responseCallbacks = new Map();
 
+    /**
+     * 
+     * @param options 
+     */
     constructor(options: MessagerOptions) {
 
         this.window = options.window;
@@ -48,7 +61,22 @@ class Messager {
         window.addEventListener("message", this.receive);
     }
 
-    send(verb: string, payload: object) {
+    /**
+     * Creates and posts a request message with the specified verb and payload.
+     * Returns a Promise with the companion response message.
+     * 
+     * @example Send a fire-and-forgot message.
+     * I.e Do not wait for a response message.
+     * 
+     * @example Send a request message and perform an action when the response
+     * message is received.  
+     *   
+     * @param verb. The message verb.   
+     * @param payload. The message payload.
+     * @returns A Promise that is resolved when a companion response message is
+     * received.  
+     */
+    send(verb: string, payload: object = null) {
 
         const id = this.createGuid();
         const message = this.createMessage(verb, id, MessageType.Request, payload);
@@ -61,9 +89,12 @@ class Messager {
             });
             this.postMessage(message);
         });
-
     }
 
+    /**
+     * 
+     * @param message 
+     */
     receive(message) {
         if (!message) {
             this.logError('Invalid message parameter');
@@ -78,13 +109,9 @@ class Messager {
         //callback(msg.payload);
     }
 
-    private isMessageAllowed(message) {
+    private isMessageAllowed(message) { }
 
-    }
-
-    private isMessageValid(message) {
-
-    }
+    private isMessageValid(message) { }
 
     private logError(errorMessage) {
         console.error('Messager', errorMessage);
@@ -100,7 +127,9 @@ class Messager {
             + s4() + "-" + s4() + s4() + s4();
     }
 
-    private createMessage(verb: string, id: string, type: MessageType, payload: object, error: object = null): object {
+    private createMessage(verb: string, id: string, type: MessageType,
+        payload: object, error: object = null): object {
+
         const message: any = {
             verb: verb,
             id: id,
