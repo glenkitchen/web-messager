@@ -1,130 +1,84 @@
-/**
- * TODO
- *  linter 80 characters per line
- *  receive 
- *  callbacks
- *  log/trace
- *  validation
- *  error handling and reject
- *  destroy
- *  unit test
- *  interacive test
- *  documentation
- *  npm package  
- */
-
-/**
- * Configuration options for a Messager instance.
- * 
- * window:
- * The reference to the target window.
- * The iframe host reference is iframe.contentWindow
- * For the iframe itself the referece is window.parent
- * 
- * targetOrigin:
- * The URI of the target origin.
- * 
- * source:
- * The source of the messages.    
- */
 interface MessagerOptions {
     targetWindow: Window,
     targetOrigin: string,
-    source: string
+    messageSource: string,
+    mustLogInfo?: boolean,
+    messageStructures?: object,
+    receivedCallbacks?: object
 }
 
-/**
- * The type of message.  
- */
 enum MessageType {
     Request = 'REQUEST',
     Response = 'RESPONSE'
 }
 
-/**
- * Helper library for web messaging i.e. window.postMessage() 
- * 
- * Use JSON message structures for easy validation:
- * 
- * Use promises for request-response roundtrips: 
- *  
- */
+interface MessageKey {
+    verb: string,
+    type: MessageType
+}
+
 class Messager {
 
     private targetWindow: Window;
     private targetOrigin: string;
-    private source: string;
-    // Map verbs to message payload structures
+    private messageSource: string;
+    private mustLogInfo: boolean;
     private messageStructures = new Map();
-    // Map id's (guids) to message promises    
-    private promises = new Map();
-    private requestCallbacks = new Map();
-    private responseCallbacks = new Map();
+    private receivedCallbacks = new Map();
 
+    private promises = new Map();
     private baseMessageStructure = {
         verb: 'string',
         id: 'string',
         date: 'string',
         type: ['REQUEST', 'RESPONSE'],
-        source: 'string'
+        source: 'string',
+        payload: {}
     };
 
-    private InvalidMessageString = 'Invalid message received';
-    private NoMessageOriginString = 'The message has no origin';
-
-    /**
-     * 
-     * @param options 
-     */
     constructor(options: MessagerOptions) {
 
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
-        this.source = options.source;
+        this.messageSource = options.messageSource;
+        this.mustLogInfo = options.mustLogInfo || true;
+
+        if (options.messageStructures) {
+            for (const key of Object.keys(options.messageStructures)) {
+                this.messageStructures.set(key, Object.assign({}, this.baseMessageStructure,
+                    options.messageStructures[key]))
+            }
+        }
+
+        if (options.receivedCallbacks) {
+            for (const key of Object.keys(options.receivedCallbacks)) {
+                this.receivedCallbacks.set(key, options.receivedCallbacks[key]);
+            }
+        }
 
         window.addEventListener("message", this.receiveMessage);
     }
 
-    /**
-         * Receive a message.
-         * 
-         * @param message. The received message. 
-         */
     receiveMessage(message) {
-        if (!message) {
-            this.doError(this.InvalidMessageString);
-        }
 
-        if (!this.isMessageAllowed(message)) {
+        if (!this.validateReceivedMessage(message)) {
             return;
         }
 
-        // invoke the resolver function to resolve the payload
-        const resolver = this.promises.get(message.id);
-        const msg = resolver(message);
+        const data = message.data;
+        const key = this.createMessageKey(message.verb, message.type);
 
-        // execute the received callback
-        //const callback = this(message.verb);
-        //callback(msg.payload);
+        this.validateMessage(data, this.getMessageStructure(key));
+
+        if (message.type === MessageType.Response) {
+            this.invokeResolver(data.id, data.payload);
+        }
+
+        this.invokeReceivedCallback(key, data.payload);
     }
 
-    /**
-     * Creates and posts a request message with the specified verb and payload.
-     * Returns a Promise which is resolved when the response message 
-     * is received.
-     * 
-     * @example Send a fire-and-forgot message.
-     * I.e Do not wait for a response message.
-     * 
-     * @example Send a request message and perform an action when the response
-     * message is received.  
-     *   
-     * @param verb. The message verb. TODO validate.  
-     * @param payload. The message payload. TODO validate.
-     * @returns A Promise that is resolved when the response message is
-     * received.  
-     */
-    send(verb: string, payload: object = null) {
+
+    sendMessage(verb: string, payload: object = null) {
 
         const id = this.createGuid();
         const message = this.createMessage(verb, id, MessageType.Request, payload);
@@ -139,13 +93,12 @@ class Messager {
         });
     }
 
-
-    validateMessage(message, messageStructure): string[] {
+    validateMessage(data: object, structure: object): string[] {
         let errors = [];
 
-        for (const key of Object.keys(messageStructure)) {
-            const val1 = messageStructure[key];
-            const val2 = message[key];
+        for (const key of Object.keys(structure)) {
+            const val1 = structure[key];
+            const val2 = data[key];
             const type1 = this.getType(val1);
             const type2 = this.getType(val2);
 
@@ -172,7 +125,6 @@ class Messager {
         return errors;
     }
 
-    // TODO? Use more robust uuid implementation
     private createGuid(): string {
 
         const s4 = () => Math.floor((1 + Math.random()) * 0x10000)
@@ -183,15 +135,14 @@ class Messager {
             + s4() + "-" + s4() + s4() + s4();
     }
 
-    private createMessage(verb: string, id: string, type: MessageType,
-        payload: object, error: object = null): object {
+    private createMessage(verb: string, id: string, type: MessageType, payload: object, error: object = null): object {
 
         const message: any = {
             verb: verb,
             id: id,
             date: new Date().toLocaleString(),
             type: type,
-            source: this.source,
+            source: this.messageSource,
             payload: payload || {}
         }
         if (error) {
@@ -200,10 +151,25 @@ class Messager {
         return message;
     }
 
-    // TODO? Send Error Response  
+    private createMessageKey(verb: string, type: MessageType): MessageKey {
+        return {
+            verb,
+            type
+        }
+    }
+
     private doError(errorMessage) {
         console.error('Messager', errorMessage);
         throw new Error(errorMessage);
+    }
+
+    private getMessageStructure(key: MessageKey): object {
+        let structure = this.messageStructures.get(key);
+        if (!structure) {
+            this.messageStructures.set(key, Object.assign({}, this.baseMessageStructure));
+            structure = this.messageStructures.get(key);
+        }
+        return structure;
     }
 
     private getType(val): string {
@@ -217,16 +183,49 @@ class Messager {
         return typeof val;
     }
 
-    private isMessageAllowed(message): boolean {
-        if (!message.origin) {
-            this.doError(this.NoMessageOriginString);
+    private invokeReceivedCallback(key: MessageKey, payload: object) {
+        const callback = this.receivedCallbacks.get(key);
+        if (callback) {
+            callback(payload);
         }
+    }
 
-        return message.origin === this.targetOrigin;
+    private invokeResolver(id: string, payload: object) {
+        const resolver = this.promises.get(id);
+        if (resolver) {
+            resolver(payload);
+        }
+        else {
+            this.logInfo(`No Promise for a RESPONSE message with id ${id}`);
+        }
+    }
+
+    private logInfo(message) {
+        if (this.mustLogInfo) {
+            console.info('Messager', message)
+        }
     }
 
     private postMessage(message) {
         this.targetWindow.postMessage(JSON.stringify(message), this.targetOrigin);
     }
 
+    private validateMessageProperty(obj: any, props: string[]) {
+        props.forEach((prop) => {
+            if (!obj[prop]) {
+                this.doError(`The message has no ${prop}`);
+            }
+        });
+    };
+
+    private validateReceivedMessage(message): boolean {
+        if (!message) {
+            this.doError('Invalid message received');
+        }
+
+        this.validateMessageProperty(message, ['origin', 'data']);
+        this.validateMessageProperty(message.data, ['verb', 'id', 'date', 'type', 'source', 'payload']);
+
+        return message.origin === this.targetOrigin;
+    }
 }
