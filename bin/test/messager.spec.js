@@ -29,7 +29,6 @@ describe('Messager', function () {
                 verb: verb,
                 id: id,
                 date: date,
-                type: MessageType.Response,
                 source: source,
                 payload: payload
             }
@@ -49,6 +48,11 @@ describe('Messager', function () {
         spyOn(msgr, 'createMessage');
         msgr.sendMessage(verb, payload);
         expect(msgr.createMessage).toHaveBeenCalledWith(verb, id, MessageType.Request, payload);
+    });
+    it('sendMessage creates a promise function', function () {
+        spyOn(msgr, 'createPromiseFunction');
+        msgr.sendMessage(verb, payload);
+        expect(msgr.createPromiseFunction).toHaveBeenCalled();
     });
     it('sendMessage posts a message', function () {
         spyOn(msgr, 'createMessage').and.returnValue(simpleMessage);
@@ -138,7 +142,6 @@ describe('Messager', function () {
         }).toThrowError('The message has no verb');
     });
     it('receiveMessage with no id throws error', function () {
-        ;
         expect(function () {
             msgr.receiveMessage({
                 origin: '*',
@@ -148,10 +151,30 @@ describe('Messager', function () {
             });
         }).toThrowError('The message has no id');
     });
-    // it('receiveMessage with invalid id logs info of no promise ', () => {
-    //     spyOn(msgr, 'logInfo');
-    //     msgr.receiveMessage(fullMessage);
-    //     expect(msgr.logInfo).toHaveBeenCalledWith('No Promise for a RESPONSE message with id 123');
+    it('receiveMessage with REQUEST message does not invoke promise function', function () {
+        spyOn(msgr, 'invokePromiseFunction');
+        var msg = fullMessage;
+        fullMessage.data.type = MessageType.Request;
+        msgr.receiveMessage(msg);
+        expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
+    });
+    // it('receiveMessage rejects promise', () => {        
+    // });
+    it('receiveMessage resolves promise', function () {
+        spyOn(msgr, 'createGuid').and.returnValue(id);
+        spyOn(msgr, 'invokePromiseFunction');
+        var msg = fullMessage;
+        fullMessage.data.type = MessageType.Response;
+        msgr.sendMessage(verb, payload)
+            .then(function (data) { return console.log(data); });
+        msgr.receiveMessage(msg);
+        expect(msgr.invokePromiseFunction).toHaveBeenCalled();
+    });
+    // it('receiveMessage sends error message', () => {        
+    // });
+    // it('receiveMessage does not invoke received callback', () => {        
+    // });
+    // it('receiveMessage invokes received callback', () => {        
     // });
 });
 //# sourceMappingURL=messager.spec.js.map

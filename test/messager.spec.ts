@@ -1,3 +1,5 @@
+
+
 describe('Messager', () => {
 
     let msgr;
@@ -10,6 +12,7 @@ describe('Messager', () => {
     let fullMessage;
 
     beforeEach(() => {
+
         msgr = new Messager({
             targetWindow: window.parent,
             targetOrigin: '*',
@@ -17,21 +20,23 @@ describe('Messager', () => {
             mustLogInfo: false,
             mustLogError: false
         });
+
         verb = 'TESTVERB';
         id = '123';
         date = new Date(2018, 1, 1);
         source = 'TestSource';
         payload = { test: 'abc' };
+
         simpleMessage = {
             payload: 'abc'
         };
+
         fullMessage = {
             origin: '*',
             data: {
                 verb: verb,
                 id: id,
                 date: date,
-                type: MessageType.Response,
                 source: source,
                 payload: payload
             }
@@ -39,7 +44,7 @@ describe('Messager', () => {
     })
 
     it('sendMessage without verb throws error', () => {
-        
+
         expect(() => { msgr.sendMessage(null) })
             .toThrowError('Invalid verb parameter');
     });
@@ -54,17 +59,32 @@ describe('Messager', () => {
     });
 
     it('sendMessage creates a message', () => {
+
         spyOn(msgr, 'createGuid').and.returnValue(id);
         spyOn(msgr, 'createMessage');
+
         msgr.sendMessage(verb, payload);
+
         expect(msgr.createMessage).toHaveBeenCalledWith(verb, id,
             MessageType.Request, payload);
     });
 
+    it('sendMessage creates a promise function', () => {
+
+        spyOn(msgr, 'createPromiseFunction');
+
+        msgr.sendMessage(verb, payload);
+
+        expect(msgr.createPromiseFunction).toHaveBeenCalled();
+    });
+
     it('sendMessage posts a message', () => {
+
         spyOn(msgr, 'createMessage').and.returnValue(simpleMessage);
         spyOn(msgr, 'postMessage');
+
         msgr.sendMessage(verb, payload);
+
         expect(msgr.postMessage).toHaveBeenCalledWith(simpleMessage);
     });
 
@@ -140,17 +160,19 @@ describe('Messager', () => {
     });
 
     it('receiveMessage with no message throws error', () => {
-        
+
         expect(() => { msgr.receiveMessage(null) })
             .toThrowError('Invalid message received');
     });
 
     it('receiveMessage with no origin throws error', () => {
+
         expect(() => { msgr.receiveMessage(simpleMessage) })
             .toThrowError('The message has no origin');
     });
 
     it('receiveMessage with no data throws error', () => {
+
         expect(() => {
             msgr.receiveMessage({
                 origin: '*'
@@ -159,6 +181,7 @@ describe('Messager', () => {
     });
 
     it('receiveMessage with no verb throws error', () => {
+
         expect(() => {
             msgr.receiveMessage({
                 origin: '*',
@@ -168,7 +191,7 @@ describe('Messager', () => {
     });
 
     it('receiveMessage with no id throws error', () => {
-        ;
+
         expect(() => {
             msgr.receiveMessage({
                 origin: '*',
@@ -179,10 +202,44 @@ describe('Messager', () => {
         }).toThrowError('The message has no id');
     });
 
-    // it('receiveMessage with invalid id logs info of no promise ', () => {
-    //     spyOn(msgr, 'logInfo');
-    //     msgr.receiveMessage(fullMessage);
-    //     expect(msgr.logInfo).toHaveBeenCalledWith('No Promise for a RESPONSE message with id 123');
+    it('receiveMessage with REQUEST message does not invoke promise function', () => {
+
+        spyOn(msgr, 'invokePromiseFunction');
+        let msg = fullMessage;
+        fullMessage.data.type = MessageType.Request;
+
+        msgr.receiveMessage(msg);
+
+        expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
+    });
+
+    // it('receiveMessage rejects promise', () => {        
     // });
+
+    it('receiveMessage resolves promise', () => {
+
+        spyOn(msgr, 'createGuid').and.returnValue(id);
+        spyOn(msgr, 'invokePromiseFunction');
+        let msg = fullMessage;
+        fullMessage.data.type = MessageType.Response;
+
+        msgr.sendMessage(verb, payload)
+            .then((data) => console.log(data));
+        msgr.receiveMessage(msg);
+
+        expect(msgr.invokePromiseFunction).toHaveBeenCalled();
+        
+    });
+
+    // it('receiveMessage sends error message', () => {        
+    // });
+
+    // it('receiveMessage does not invoke received callback', () => {        
+    // });
+
+    // it('receiveMessage invokes received callback', () => {        
+    // });
+
+    
 
 });

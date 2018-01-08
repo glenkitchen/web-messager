@@ -22,10 +22,10 @@ var Messager = /** @class */ (function () {
                 return;
             }
             var data = message.data;
-            var key = _this.createMessageKey(message.verb, message.type);
-            _this.validateMessage(data, _this.getMessageStructure(key));
-            if (message.type === MessageType.Response) {
-                _this.invokeResolver(data.id, data.payload);
+            var key = _this.createMessageKey(data.verb, data.type);
+            var errors = _this.validateMessage(data, _this.getMessageStructure(key));
+            if (data.type === MessageType.Response) {
+                _this.invokePromiseFunction(data.id, data.payload, errors);
             }
             _this.invokeReceivedCallback(key, data.payload);
         };
@@ -36,11 +36,8 @@ var Messager = /** @class */ (function () {
             }
             var id = _this.createGuid();
             var message = _this.createMessage(verb, id, MessageType.Request, payload);
-            return new Promise(function (resolve) {
-                _this.promises.set(id, function (payload) {
-                    resolve(payload);
-                    return payload;
-                });
+            return new Promise(function (resolve, reject) {
+                _this.promises.set(id, _this.createPromiseFunction(resolve, reject));
                 _this.postMessage(message);
             });
         };
@@ -133,10 +130,10 @@ var Messager = /** @class */ (function () {
                 callback(payload);
             }
         };
-        this.invokeResolver = function (id, payload) {
-            var resolver = _this.promises.get(id);
-            if (resolver) {
-                resolver(payload);
+        this.invokePromiseFunction = function (id, payload, errors) {
+            var fn = _this.promises.get(id);
+            if (fn) {
+                fn(payload, errors);
             }
             else {
                 _this.logInfo("No Promise for a RESPONSE message with id " + id);
@@ -187,6 +184,15 @@ var Messager = /** @class */ (function () {
         }
         window.addEventListener("message", this.receiveMessage);
     }
+    Messager.prototype.createPromiseFunction = function (resolve, reject) {
+        return function (payload, errors) {
+            if (errors.length > 0) {
+                reject(errors);
+            }
+            resolve(payload);
+            return payload;
+        };
+    };
     return Messager;
 }());
 //# sourceMappingURL=messager.js.map

@@ -68,18 +68,18 @@ class Messager {
         }
 
         const data = message.data;
-        const key = this.createMessageKey(message.verb, message.type);
+        const key = this.createMessageKey(data.verb, data.type);
 
-        this.validateMessage(data, this.getMessageStructure(key));
+        const errors = this.validateMessage(data, this.getMessageStructure(key));
 
-        if (message.type === MessageType.Response) {
-            this.invokeResolver(data.id, data.payload);
+        if (data.type === MessageType.Response) {
+            this.invokePromiseFunction(data.id, data.payload, errors);
         }
 
         this.invokeReceivedCallback(key, data.payload);
     }
 
-    sendMessage = (verb: string, payload: object = null) => {
+    sendMessage = (verb: string, payload: object = null): PromiseLike<{}> => {
 
         if (!verb) {
             this.doError('Invalid verb parameter');
@@ -88,21 +88,18 @@ class Messager {
         const id = this.createGuid();
         const message = this.createMessage(verb, id, MessageType.Request, payload);
 
-        return new Promise((resolve) => {
-            this.promises.set(id, payload => {
-                resolve(payload)
-                return payload;
-            });
+        return new Promise((resolve, reject) => {
+            this.promises.set(id, this.createPromiseFunction(resolve, reject));
             this.postMessage(message);
         });
     }
 
     validateMessage = (data: object, structure: object): string[] => {
-      
+
         let errors = [];
 
         for (const key of Object.keys(structure)) {
-            
+
             const val1 = structure[key];
             const val2 = data[key];
             const type1 = this.getType(val1);
@@ -165,8 +162,21 @@ class Messager {
         }
     }
 
+    private createPromiseFunction(
+        resolve: (value?: {} | PromiseLike<{}>) => void,
+        reject: (reason?: any) => void) {
+
+        return (payload, errors: string[]) => {
+            if (errors.length > 0) {
+                reject(errors);
+            }
+            resolve(payload);
+            return payload;
+        };
+    }
+
     private doError = (message) => {
-    
+
         if (this.mustLogError) {
             console.error('Messager', message);
         }
@@ -174,14 +184,14 @@ class Messager {
     }
 
     private getMessageStructure = (key: MessageKey): object => {
-       
+
         let structure = this.messageStructures.get(key);
-        
+
         if (!structure) {
             structure = Object.assign({}, this.baseMessageStructure);
             this.messageStructures.set(key, structure);
         }
-        
+
         return structure;
     }
 
@@ -198,20 +208,20 @@ class Messager {
     }
 
     private invokeReceivedCallback = (key: MessageKey, payload: object) => {
-        
+
         const callback = this.receivedCallbacks.get(key);
-      
+
         if (callback) {
             callback(payload);
         }
     }
 
-    private invokeResolver = (id: string, payload: object) => {
-        
-        const resolver = this.promises.get(id);
-     
-        if (resolver) {
-            resolver(payload);
+    private invokePromiseFunction = (id: string, payload: object, errors: string[]) => {
+
+        const fn = this.promises.get(id);
+
+        if (fn) {
+            fn(payload, errors);
         }
         else {
             this.logInfo(`No Promise for a RESPONSE message with id ${id}`);
@@ -219,7 +229,7 @@ class Messager {
     }
 
     private logInfo = (message) => {
-    
+
         if (this.mustLogInfo) {
             console.info('Messager', message)
         }
@@ -230,7 +240,7 @@ class Messager {
     }
 
     private validateMessageProperty = (obj: any, props: string[]) => {
-        
+
         props.forEach((prop) => {
             if (!obj[prop]) {
                 this.doError(`The message has no ${prop}`);
@@ -244,14 +254,14 @@ class Messager {
             this.doError('Invalid message received');
         }
 
-       if (message.origin && message.origin !== this.targetOrigin) {
-           return false;
-       } 
+        if (message.origin && message.origin !== this.targetOrigin) {
+            return false;
+        }
 
-       this.validateMessageProperty(message, ['origin', 'data']);
-       this.validateMessageProperty(message.data, ['verb', 'id', 'date', 'type', 'source', 'payload']);
+        this.validateMessageProperty(message, ['origin', 'data']);
+        this.validateMessageProperty(message.data, ['verb', 'id', 'date', 'type', 'source', 'payload']);
 
-       return true;
+        return true;
     }
 
 }
