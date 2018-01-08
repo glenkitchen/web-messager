@@ -103,3 +103,6 @@ Overview
      * @returns A Promise that is resolved when the response message is
      * received.  
      */
+
+     // map the guid to a resolver function   
+            

@@ -13,7 +13,9 @@ describe('Messager', () => {
         msgr = new Messager({
             targetWindow: window.parent,
             targetOrigin: '*',
-            messageSource: source
+            messageSource: source,
+            mustLogInfo: false,
+            mustLogError: false
         });
         verb = 'TESTVERB';
         id = '123';
@@ -36,9 +38,18 @@ describe('Messager', () => {
         };
     })
 
+    it('sendMessage without verb throws error', () => {
+        
+        expect(() => { msgr.sendMessage(null) })
+            .toThrowError('Invalid verb parameter');
+    });
+
     it('sendMessage creates a Guid', () => {
+
         spyOn(msgr, 'createGuid');
+
         msgr.sendMessage(verb, payload);
+
         expect(msgr.createGuid).toHaveBeenCalledWith();
     });
 
@@ -61,7 +72,7 @@ describe('Messager', () => {
         expect(msgr.sendMessage(verb, payload)).toEqual(jasmine.any(Promise));
     });
 
-    it('validateMessage with missing property should return error', () => {
+    it('validateMessage with a missing property should return error', () => {
         const structure = {
             mandatory: 'string'
         };
@@ -71,7 +82,7 @@ describe('Messager', () => {
         expect(errors[0]).toContain('Missing message property mandatory');
     });
 
-    it('validateMessage with invalid type should return error', () => {
+    it('validateMessage with an invalid type should return error', () => {
         const structure = {
             payload: 'number'
         };
@@ -129,19 +140,17 @@ describe('Messager', () => {
     });
 
     it('receiveMessage with no message throws error', () => {
-        ;
+        
         expect(() => { msgr.receiveMessage(null) })
             .toThrowError('Invalid message received');
     });
 
     it('receiveMessage with no origin throws error', () => {
-        ;
         expect(() => { msgr.receiveMessage(simpleMessage) })
             .toThrowError('The message has no origin');
     });
 
     it('receiveMessage with no data throws error', () => {
-        ;
         expect(() => {
             msgr.receiveMessage({
                 origin: '*'
@@ -150,7 +159,6 @@ describe('Messager', () => {
     });
 
     it('receiveMessage with no verb throws error', () => {
-        ;
         expect(() => {
             msgr.receiveMessage({
                 origin: '*',

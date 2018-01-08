@@ -11,7 +11,9 @@ describe('Messager', function () {
         msgr = new Messager({
             targetWindow: window.parent,
             targetOrigin: '*',
-            messageSource: source
+            messageSource: source,
+            mustLogInfo: false,
+            mustLogError: false
         });
         verb = 'TESTVERB';
         id = '123';
@@ -33,6 +35,10 @@ describe('Messager', function () {
             }
         };
     });
+    it('sendMessage without verb throws error', function () {
+        expect(function () { msgr.sendMessage(null); })
+            .toThrowError('Invalid verb parameter');
+    });
     it('sendMessage creates a Guid', function () {
         spyOn(msgr, 'createGuid');
         msgr.sendMessage(verb, payload);
@@ -53,7 +59,7 @@ describe('Messager', function () {
     it('sendMessage returns a Promise', function () {
         expect(msgr.sendMessage(verb, payload)).toEqual(jasmine.any(Promise));
     });
-    it('validateMessage with missing property should return error', function () {
+    it('validateMessage with a missing property should return error', function () {
         var structure = {
             mandatory: 'string'
         };
@@ -62,7 +68,7 @@ describe('Messager', function () {
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain('Missing message property mandatory');
     });
-    it('validateMessage with invalid type should return error', function () {
+    it('validateMessage with an invalid type should return error', function () {
         var structure = {
             payload: 'number'
         };
@@ -109,17 +115,14 @@ describe('Messager', function () {
         expect(errors[1]).toContain('Message property testNumber is a string instead of a number');
     });
     it('receiveMessage with no message throws error', function () {
-        ;
         expect(function () { msgr.receiveMessage(null); })
             .toThrowError('Invalid message received');
     });
     it('receiveMessage with no origin throws error', function () {
-        ;
         expect(function () { msgr.receiveMessage(simpleMessage); })
             .toThrowError('The message has no origin');
     });
     it('receiveMessage with no data throws error', function () {
-        ;
         expect(function () {
             msgr.receiveMessage({
                 origin: '*'
@@ -127,7 +130,6 @@ describe('Messager', function () {
         }).toThrowError('The message has no data');
     });
     it('receiveMessage with no verb throws error', function () {
-        ;
         expect(function () {
             msgr.receiveMessage({
                 origin: '*',
