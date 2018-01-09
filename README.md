@@ -11,15 +11,15 @@ Overview
 /**
  * TODO
  * 
- *  log/trace
- *  validation
- *  error handling and reject
+ *  log/trace, validation, error handling and reject
+ *  
  *  destroy
  * 
  *  unit test
  *  interacive test
  * 
  *  documentation
+ *  type definitions 
  *  npm package
  */
 
@@ -103,6 +103,4 @@ Overview
      * @returns A Promise that is resolved when the response message is
      * received.  
      */
-
-     // map the guid to a resolver function   
-            
+     

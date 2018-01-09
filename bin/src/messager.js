@@ -25,7 +25,10 @@ var Messager = /** @class */ (function () {
             var key = _this.createMessageKey(data.verb, data.type);
             var errors = _this.validateMessage(data, _this.getMessageStructure(key));
             if (data.type === MessageType.Response) {
-                _this.invokePromiseFunction(data.id, data.payload, errors);
+                _this.invokePromiseFunction(data, errors.length > 0 ? errors : null);
+            }
+            if (errors.length > 0) {
+                // TODO end error message     
             }
             _this.invokeReceivedCallback(key, data.payload);
         };
@@ -35,10 +38,9 @@ var Messager = /** @class */ (function () {
                 _this.doError('Invalid verb parameter');
             }
             var id = _this.createGuid();
-            var message = _this.createMessage(verb, id, MessageType.Request, payload);
             return new Promise(function (resolve, reject) {
                 _this.promises.set(id, _this.createPromiseFunction(resolve, reject));
-                _this.postMessage(message);
+                _this.postMessage(_this.createMessage(verb, id, MessageType.Request, payload));
             });
         };
         this.validateMessage = function (data, structure) {
@@ -130,10 +132,11 @@ var Messager = /** @class */ (function () {
                 callback(payload);
             }
         };
-        this.invokePromiseFunction = function (id, payload, errors) {
+        this.invokePromiseFunction = function (data, errors) {
+            var id = data.id;
             var fn = _this.promises.get(id);
             if (fn) {
-                fn(payload, errors);
+                fn(data, errors);
             }
             else {
                 _this.logInfo("No Promise for a RESPONSE message with id " + id);
@@ -185,12 +188,11 @@ var Messager = /** @class */ (function () {
         window.addEventListener("message", this.receiveMessage);
     }
     Messager.prototype.createPromiseFunction = function (resolve, reject) {
-        return function (payload, errors) {
-            if (errors.length > 0) {
-                reject(errors);
+        return function (data, error) {
+            if (error) {
+                reject(error);
             }
-            resolve(payload);
-            return payload;
+            resolve(data);
         };
     };
     return Messager;

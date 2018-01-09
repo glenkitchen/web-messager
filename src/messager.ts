@@ -73,7 +73,11 @@ class Messager {
         const errors = this.validateMessage(data, this.getMessageStructure(key));
 
         if (data.type === MessageType.Response) {
-            this.invokePromiseFunction(data.id, data.payload, errors);
+            this.invokePromiseFunction(data, errors.length > 0 ? errors : null);
+        }
+
+        if (errors.length > 0) {
+            // TODO end error message     
         }
 
         this.invokeReceivedCallback(key, data.payload);
@@ -86,11 +90,10 @@ class Messager {
         }
 
         const id = this.createGuid();
-        const message = this.createMessage(verb, id, MessageType.Request, payload);
 
         return new Promise((resolve, reject) => {
             this.promises.set(id, this.createPromiseFunction(resolve, reject));
-            this.postMessage(message);
+            this.postMessage(this.createMessage(verb, id, MessageType.Request, payload));
         });
     }
 
@@ -156,22 +159,20 @@ class Messager {
     }
 
     private createMessageKey = (verb: string, type: MessageType): MessageKey => {
+
         return {
             verb,
             type
         }
     }
 
-    private createPromiseFunction(
-        resolve: (value?: {} | PromiseLike<{}>) => void,
-        reject: (reason?: any) => void) {
+    private createPromiseFunction(resolve: (data?) => void, reject: (error?) => void) {
 
-        return (payload, errors: string[]) => {
-            if (errors.length > 0) {
-                reject(errors);
+        return (data, error) => {
+            if (error) {
+                reject(error);
             }
-            resolve(payload);
-            return payload;
+            resolve(data);
         };
     }
 
@@ -180,6 +181,7 @@ class Messager {
         if (this.mustLogError) {
             console.error('Messager', message);
         }
+
         throw new Error(message);
     }
 
@@ -216,12 +218,13 @@ class Messager {
         }
     }
 
-    private invokePromiseFunction = (id: string, payload: object, errors: string[]) => {
+    private invokePromiseFunction = (data: any, errors: string[]) => {
 
+        const id = data.id;
         const fn = this.promises.get(id);
 
         if (fn) {
-            fn(payload, errors);
+            fn(data, errors);
         }
         else {
             this.logInfo(`No Promise for a RESPONSE message with id ${id}`);

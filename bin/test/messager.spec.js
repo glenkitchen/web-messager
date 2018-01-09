@@ -5,8 +5,7 @@ describe('Messager', function () {
     var date;
     var source;
     var payload;
-    var simpleMessage;
-    var fullMessage;
+    var message;
     beforeEach(function () {
         msgr = new Messager({
             targetWindow: window.parent,
@@ -20,10 +19,7 @@ describe('Messager', function () {
         date = new Date(2018, 1, 1);
         source = 'TestSource';
         payload = { test: 'abc' };
-        simpleMessage = {
-            payload: 'abc'
-        };
-        fullMessage = {
+        message = {
             origin: '*',
             data: {
                 verb: verb,
@@ -55,28 +51,37 @@ describe('Messager', function () {
         expect(msgr.createPromiseFunction).toHaveBeenCalled();
     });
     it('sendMessage posts a message', function () {
-        spyOn(msgr, 'createMessage').and.returnValue(simpleMessage);
+        var msg = {
+            payload: 'abc'
+        };
+        spyOn(msgr, 'createMessage').and.returnValue(msg);
         spyOn(msgr, 'postMessage');
         msgr.sendMessage(verb, payload);
-        expect(msgr.postMessage).toHaveBeenCalledWith(simpleMessage);
+        expect(msgr.postMessage).toHaveBeenCalledWith(msg);
     });
     it('sendMessage returns a Promise', function () {
         expect(msgr.sendMessage(verb, payload)).toEqual(jasmine.any(Promise));
     });
     it('validateMessage with a missing property should return error', function () {
+        var msg = {
+            payload: 'abc'
+        };
         var structure = {
             mandatory: 'string'
         };
-        var errors = msgr.validateMessage(simpleMessage, structure);
+        var errors = msgr.validateMessage(msg, structure);
         //console.log(errors);
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain('Missing message property mandatory');
     });
     it('validateMessage with an invalid type should return error', function () {
+        var msg = {
+            payload: 'abc'
+        };
         var structure = {
             payload: 'number'
         };
-        var errors = msgr.validateMessage(simpleMessage, structure);
+        var errors = msgr.validateMessage(msg, structure);
         //console.log(errors);
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain('Message property payload is a string instead of a number');
@@ -99,8 +104,7 @@ describe('Messager', function () {
             subObject: {
                 testBoolean: 'true',
                 testNumber: '123',
-                testString: 'def',
-                testFunkyType: 'xyz'
+                testString: 'def'
             }
         };
         var structure = {
@@ -108,8 +112,7 @@ describe('Messager', function () {
             subObject: {
                 testBoolean: 'boolean',
                 testNumber: 'number',
-                testString: 'string',
-                testFunkyType: null
+                testString: 'string'
             }
         };
         var errors = msgr.validateMessage(message, structure);
@@ -118,12 +121,23 @@ describe('Messager', function () {
         expect(errors[0]).toContain('Message property testBoolean is a string instead of a boolean');
         expect(errors[1]).toContain('Message property testNumber is a string instead of a number');
     });
+    it('validateMessage with a null structure type should NOT return error', function () {
+        var message = {
+            test: 'abc'
+        };
+        var structure = {
+            test: null
+        };
+        var errors = msgr.validateMessage(message, structure);
+        // console.log(errors);
+        expect(errors.length).toEqual(0);
+    });
     it('receiveMessage with no message throws error', function () {
         expect(function () { msgr.receiveMessage(null); })
             .toThrowError('Invalid message received');
     });
     it('receiveMessage with no origin throws error', function () {
-        expect(function () { msgr.receiveMessage(simpleMessage); })
+        expect(function () { msgr.receiveMessage({}); })
             .toThrowError('The message has no origin');
     });
     it('receiveMessage with no data throws error', function () {
@@ -153,22 +167,21 @@ describe('Messager', function () {
     });
     it('receiveMessage with REQUEST message does not invoke promise function', function () {
         spyOn(msgr, 'invokePromiseFunction');
-        var msg = fullMessage;
-        fullMessage.data.type = MessageType.Request;
-        msgr.receiveMessage(msg);
+        message.data.type = MessageType.Request;
+        msgr.receiveMessage(message);
         expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
     });
     // it('receiveMessage rejects promise', () => {        
     // });
-    it('receiveMessage resolves promise', function () {
+    it('receiveMessage resolves promise', function (done) {
         spyOn(msgr, 'createGuid').and.returnValue(id);
-        spyOn(msgr, 'invokePromiseFunction');
-        var msg = fullMessage;
-        fullMessage.data.type = MessageType.Response;
-        msgr.sendMessage(verb, payload)
-            .then(function (data) { return console.log(data); });
-        msgr.receiveMessage(msg);
-        expect(msgr.invokePromiseFunction).toHaveBeenCalled();
+        message.data.type = MessageType.Response;
+        var promise = msgr.sendMessage(verb, payload)
+            .then(function (data) {
+            expect(data.payload.test).toEqual('abc');
+            done();
+        });
+        msgr.receiveMessage(message);
     });
     // it('receiveMessage sends error message', () => {        
     // });

@@ -1,5 +1,3 @@
-
-
 describe('Messager', () => {
 
     let msgr;
@@ -8,8 +6,7 @@ describe('Messager', () => {
     let date;
     let source;
     let payload;
-    let simpleMessage;
-    let fullMessage;
+    let message;
 
     beforeEach(() => {
 
@@ -27,11 +24,7 @@ describe('Messager', () => {
         source = 'TestSource';
         payload = { test: 'abc' };
 
-        simpleMessage = {
-            payload: 'abc'
-        };
-
-        fullMessage = {
+        message = {
             origin: '*',
             data: {
                 verb: verb,
@@ -80,12 +73,15 @@ describe('Messager', () => {
 
     it('sendMessage posts a message', () => {
 
-        spyOn(msgr, 'createMessage').and.returnValue(simpleMessage);
+        const msg = {
+            payload: 'abc'
+        };
+        spyOn(msgr, 'createMessage').and.returnValue(msg);
         spyOn(msgr, 'postMessage');
 
         msgr.sendMessage(verb, payload);
 
-        expect(msgr.postMessage).toHaveBeenCalledWith(simpleMessage);
+        expect(msgr.postMessage).toHaveBeenCalledWith(msg);
     });
 
     it('sendMessage returns a Promise', () => {
@@ -93,36 +89,48 @@ describe('Messager', () => {
     });
 
     it('validateMessage with a missing property should return error', () => {
+
+        const msg = {
+            payload: 'abc'
+        };
         const structure = {
             mandatory: 'string'
         };
-        const errors = msgr.validateMessage(simpleMessage, structure);
+
+        const errors = msgr.validateMessage(msg, structure);
+
         //console.log(errors);
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain('Missing message property mandatory');
     });
 
     it('validateMessage with an invalid type should return error', () => {
+
+        const msg = {
+            payload: 'abc'
+        };
         const structure = {
             payload: 'number'
         };
 
-        const errors = msgr.validateMessage(simpleMessage, structure);
+        const errors = msgr.validateMessage(msg, structure);
+
         //console.log(errors);
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain('Message property payload is a string instead of a number');
     });
 
     it('validateMessage with an invalid array value should return error', () => {
+
         const message = {
             type: 'REQUESt'
         };
-
         const structure = {
             type: ['REQUEST', 'RESPONSE']
         };
 
         const errors = msgr.validateMessage(message, structure);
+
         //console.log(errors);
         expect(errors.length).toEqual(1);
         expect(errors[0]).toContain(
@@ -131,32 +139,46 @@ describe('Messager', () => {
     });
 
     it('validateMessage with an invalid sub-object properties should return error', () => {
+
         const message = {
             test: 'abc',
             subObject: {
                 testBoolean: 'true',
                 testNumber: '123',
-                testString: 'def',
-                testFunkyType: 'xyz'
+                testString: 'def'
             }
         };
-
         const structure = {
             test: 'string',
             subObject: {
                 testBoolean: 'boolean',
                 testNumber: 'number',
-                testString: 'string',
-                testFunkyType: null
+                testString: 'string'
             }
         };
 
         const errors = msgr.validateMessage(message, structure);
+
         // console.log(errors);
         expect(errors.length).toEqual(2);
         expect(errors[0]).toContain('Message property testBoolean is a string instead of a boolean');
         expect(errors[1]).toContain('Message property testNumber is a string instead of a number');
 
+    });
+
+    it('validateMessage with a null structure type should NOT return error', () => {
+
+        const message = {
+            test: 'abc'
+        };
+        const structure = {
+            test: null
+        };
+
+        const errors = msgr.validateMessage(message, structure);
+
+        // console.log(errors);
+        expect(errors.length).toEqual(0);
     });
 
     it('receiveMessage with no message throws error', () => {
@@ -167,7 +189,7 @@ describe('Messager', () => {
 
     it('receiveMessage with no origin throws error', () => {
 
-        expect(() => { msgr.receiveMessage(simpleMessage) })
+        expect(() => { msgr.receiveMessage({}) })
             .toThrowError('The message has no origin');
     });
 
@@ -205,10 +227,9 @@ describe('Messager', () => {
     it('receiveMessage with REQUEST message does not invoke promise function', () => {
 
         spyOn(msgr, 'invokePromiseFunction');
-        let msg = fullMessage;
-        fullMessage.data.type = MessageType.Request;
+        message.data.type = MessageType.Request;
 
-        msgr.receiveMessage(msg);
+        msgr.receiveMessage(message);
 
         expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
     });
@@ -216,19 +237,17 @@ describe('Messager', () => {
     // it('receiveMessage rejects promise', () => {        
     // });
 
-    it('receiveMessage resolves promise', () => {
+    it('receiveMessage resolves promise', (done) => {
 
         spyOn(msgr, 'createGuid').and.returnValue(id);
-        spyOn(msgr, 'invokePromiseFunction');
-        let msg = fullMessage;
-        fullMessage.data.type = MessageType.Response;
+        message.data.type = MessageType.Response;
 
-        msgr.sendMessage(verb, payload)
-            .then((data) => console.log(data));
-        msgr.receiveMessage(msg);
-
-        expect(msgr.invokePromiseFunction).toHaveBeenCalled();
-        
+        const promise = msgr.sendMessage(verb, payload)
+            .then((data) => {
+                expect(data.payload.test).toEqual('abc');
+                done();            
+            });
+        msgr.receiveMessage(message);        
     });
 
     // it('receiveMessage sends error message', () => {        
@@ -240,6 +259,6 @@ describe('Messager', () => {
     // it('receiveMessage invokes received callback', () => {        
     // });
 
-    
+
 
 });
