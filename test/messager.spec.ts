@@ -14,7 +14,7 @@ describe('Messager', () => {
             targetWindow: window.parent,
             targetOrigin: '*',
             messageSource: source,
-            mustLogInfo: false,
+            mustLogVerbose: false,
             mustLogError: false
         });
 
@@ -30,6 +30,7 @@ describe('Messager', () => {
                 verb: verb,
                 id: id,
                 date: date,
+                type: MessageType.Response,
                 source: source,
                 payload: payload
             }
@@ -48,7 +49,8 @@ describe('Messager', () => {
 
         msgr.sendMessage(verb, payload);
 
-        expect(msgr.createGuid).toHaveBeenCalledWith();
+        expect(msgr.createGuid).toHaveBeenCalled();
+
     });
 
     it('sendMessage creates a message', () => {
@@ -190,7 +192,7 @@ describe('Messager', () => {
     it('receiveMessage with no origin throws error', () => {
 
         expect(() => { msgr.receiveMessage({}) })
-            .toThrowError('The message has no origin');
+            .toThrowError('Invalid message received. The message has no origin.');
     });
 
     it('receiveMessage with no data throws error', () => {
@@ -199,29 +201,44 @@ describe('Messager', () => {
             msgr.receiveMessage({
                 origin: '*'
             })
-        }).toThrowError('The message has no data');
+        }).toThrowError('Invalid message received. The message has no data.');
     });
 
-    it('receiveMessage with no verb throws error', () => {
+    it('receiveMessage with no verb logs error', () => {
 
-        expect(() => {
-            msgr.receiveMessage({
-                origin: '*',
-                data: {}
-            })
-        }).toThrowError('The message has no verb');
+        spyOn(msgr, 'doError');
+
+        msgr.receiveMessage({
+            origin: '*',
+            data: {}
+        })
+
+        expect(msgr.doError).toHaveBeenCalledWith([
+            'Missing message property verb',
+            'Missing message property id',
+            'Missing message property date',
+            'Missing message property type',
+            'Missing message property source',
+            'Missing message property payload'], false);
     });
 
-    it('receiveMessage with no id throws error', () => {
+    it('receiveMessage with no id logs error', () => {
+        
+        spyOn(msgr, 'doError');
 
-        expect(() => {
-            msgr.receiveMessage({
-                origin: '*',
-                data: {
-                    verb: verb
-                }
-            })
-        }).toThrowError('The message has no id');
+        msgr.receiveMessage({
+            origin: '*',
+            data: {
+                verb: verb
+            }
+        })
+
+        expect(msgr.doError).toHaveBeenCalledWith([
+            'Missing message property id',
+            'Missing message property date',
+            'Missing message property type',
+            'Missing message property source',
+            'Missing message property payload'], false);
     });
 
     it('receiveMessage with REQUEST message does not invoke promise function', () => {
@@ -234,13 +251,10 @@ describe('Messager', () => {
         expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
     });
 
-    // it('receiveMessage rejects promise', () => {        
-    // });
-
-    it('receiveMessage resolves promise', (done) => {
+    it('receiveMessage rejects promise', (done) => {
 
         spyOn(msgr, 'createGuid').and.returnValue(id);
-        message.data.type = MessageType.Response;
+        delete message.data.verb;
 
         const promise = msgr.sendMessage(verb, payload)
             .then((data) => {
@@ -250,6 +264,18 @@ describe('Messager', () => {
         msgr.receiveMessage(message);        
     });
 
+    // it('receiveMessage resolves promise', (done) => {
+
+    //     spyOn(msgr, 'createGuid').and.returnValue(id);
+
+    //     const promise = msgr.sendMessage(verb, payload)
+    //         .then((data) => {
+    //             expect(data.payload.test).toEqual('abc');
+    //             done();            
+    //         });
+    //     msgr.receiveMessage(message);        
+    // });
+
     // it('receiveMessage sends error message', () => {        
     // });
 
@@ -258,7 +284,5 @@ describe('Messager', () => {
 
     // it('receiveMessage invokes received callback', () => {        
     // });
-
-
 
 });

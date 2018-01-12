@@ -18,24 +18,40 @@ var Messager = /** @class */ (function () {
             payload: {}
         };
         this.receiveMessage = function (message) {
-            if (!_this.validateReceivedMessage(message)) {
+            var err = _this.validateReceivedMessage(message);
+            if (err) {
+                throw new Error(err);
+            }
+            ;
+            err = _this.validateReceivedOrigin(message.origin);
+            if (err) {
+                return;
+            }
+            var errs = _this.validateMessage(message.data, _this.baseMessageStructure);
+            if (errs.length > 0) {
                 return;
             }
             var data = message.data;
             var key = _this.createMessageKey(data.verb, data.type);
+            var baseErrors = _this.validateMessage(data, _this.baseMessageStructure);
+            if (baseErrors.length > 0) {
+                _this.logError(baseErrors);
+                // TODO send error message
+                return;
+            }
             var errors = _this.validateMessage(data, _this.getMessageStructure(key));
             if (data.type === MessageType.Response) {
                 _this.invokePromiseFunction(data, errors.length > 0 ? errors : null);
             }
-            if (errors.length > 0) {
-                // TODO end error message     
+            // TODO
+            if (errors.length = 0) {
+                _this.invokeReceivedCallback(key, data.payload);
             }
-            _this.invokeReceivedCallback(key, data.payload);
         };
         this.sendMessage = function (verb, payload) {
             if (payload === void 0) { payload = null; }
             if (!verb) {
-                _this.doError('Invalid verb parameter');
+                _this.logError('Invalid verb parameter');
             }
             var id = _this.createGuid();
             return new Promise(function (resolve, reject) {
@@ -45,13 +61,16 @@ var Messager = /** @class */ (function () {
         };
         this.validateMessage = function (data, structure) {
             var errors = [];
+            if (!structure) {
+                return errors;
+            }
             var _loop_1 = function (key) {
                 var val1 = structure[key];
-                var val2 = data[key];
+                var val2 = data ? data[key] : null;
                 var type1 = _this.getType(val1);
-                var type2 = _this.getType(val2);
+                var type2 = val2 ? _this.getType(val2) : null;
                 if (!val2) {
-                    if (!val1.endsWith('?')) {
+                    if ((type1 === 'string' && !val1.endsWith('?')) || type1 !== 'string') {
                         errors.push("Missing message property " + key);
                     }
                 }
@@ -72,6 +91,9 @@ var Messager = /** @class */ (function () {
             for (var _i = 0, _a = Object.keys(structure); _i < _a.length; _i++) {
                 var key = _a[_i];
                 _loop_1(key);
+            }
+            if (errors.length > 0) {
+                _this.logError(errors);
             }
             return errors;
         };
@@ -102,12 +124,6 @@ var Messager = /** @class */ (function () {
                 verb: verb,
                 type: type
             };
-        };
-        this.doError = function (message) {
-            if (_this.mustLogError) {
-                console.error('Messager', message);
-            }
-            throw new Error(message);
         };
         this.getMessageStructure = function (key) {
             var structure = _this.messageStructures.get(key);
@@ -142,6 +158,11 @@ var Messager = /** @class */ (function () {
                 _this.logInfo("No Promise for a RESPONSE message with id " + id);
             }
         };
+        this.logError = function (message) {
+            if (_this.mustLogError) {
+                console.error('Messager', message);
+            }
+        };
         this.logInfo = function (message) {
             if (_this.mustLogInfo) {
                 console.info('Messager', message);
@@ -150,29 +171,36 @@ var Messager = /** @class */ (function () {
         this.postMessage = function (message) {
             _this.targetWindow.postMessage(JSON.stringify(message), _this.targetOrigin);
         };
-        this.validateMessageProperty = function (obj, props) {
-            props.forEach(function (prop) {
-                if (!obj[prop]) {
-                    _this.doError("The message has no " + prop);
-                }
-            });
-        };
         this.validateReceivedMessage = function (message) {
+            var err;
             if (!message) {
-                _this.doError('Invalid message received');
+                err = 'Invalid message received';
             }
-            if (message.origin && message.origin !== _this.targetOrigin) {
-                return false;
+            else if (!message.origin) {
+                err = 'Invalid message received. The message has no origin.';
             }
-            _this.validateMessageProperty(message, ['origin', 'data']);
-            _this.validateMessageProperty(message.data, ['verb', 'id', 'date', 'type', 'source', 'payload']);
-            return true;
+            else if (!message.data) {
+                err = 'Invalid message received. The message has no data.';
+            }
+            if (err) {
+                _this.logError(err);
+                return err;
+            }
+            return '';
+        };
+        this.validateReceivedOrigin = function (origin) {
+            if (origin !== _this.targetOrigin) {
+                var err = "Invalid message received. \n                         The origin " + origin + " does not equal the target origin " + _this.targetOrigin;
+                _this.logError(err);
+                return err;
+            }
+            return '';
         };
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
         this.messageSource = options.messageSource;
-        this.mustLogInfo = options.mustLogInfo || true;
-        this.mustLogError = options.mustLogError || false;
+        this.mustLogInfo = options.mustLogInfo === false ? false : true;
+        this.mustLogError = options.mustLogError === false ? false : true;
         if (options.messageStructures) {
             for (var _i = 0, _a = Object.keys(options.messageStructures); _i < _a.length; _i++) {
                 var key = _a[_i];
@@ -185,7 +213,7 @@ var Messager = /** @class */ (function () {
                 this.receivedCallbacks.set(key, options.receivedCallbacks[key]);
             }
         }
-        window.addEventListener("message", this.receiveMessage);
+        window.addEventListener('message', this.receiveMessage);
     }
     Messager.prototype.createPromiseFunction = function (resolve, reject) {
         return function (data, error) {

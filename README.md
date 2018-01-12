@@ -1,12 +1,11 @@
 Messager
 --------
-
 Helper library for web messaging i.e. window.postMessage()
 
 Overview
 --------
-* Predefined JSON message structure
-* Request-response roundtrips
+* Pre-defined JSON-like message structure
+* Request-response roundtrips with Promises
 
 /**
  * TODO

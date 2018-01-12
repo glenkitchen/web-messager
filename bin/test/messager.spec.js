@@ -25,6 +25,7 @@ describe('Messager', function () {
                 verb: verb,
                 id: id,
                 date: date,
+                type: MessageType.Response,
                 source: source,
                 payload: payload
             }
@@ -37,7 +38,7 @@ describe('Messager', function () {
     it('sendMessage creates a Guid', function () {
         spyOn(msgr, 'createGuid');
         msgr.sendMessage(verb, payload);
-        expect(msgr.createGuid).toHaveBeenCalledWith();
+        expect(msgr.createGuid).toHaveBeenCalled();
     });
     it('sendMessage creates a message', function () {
         spyOn(msgr, 'createGuid').and.returnValue(id);
@@ -138,32 +139,45 @@ describe('Messager', function () {
     });
     it('receiveMessage with no origin throws error', function () {
         expect(function () { msgr.receiveMessage({}); })
-            .toThrowError('The message has no origin');
+            .toThrowError('Invalid message received. The message has no origin.');
     });
     it('receiveMessage with no data throws error', function () {
         expect(function () {
             msgr.receiveMessage({
                 origin: '*'
             });
-        }).toThrowError('The message has no data');
+        }).toThrowError('Invalid message received. The message has no data.');
     });
-    it('receiveMessage with no verb throws error', function () {
-        expect(function () {
-            msgr.receiveMessage({
-                origin: '*',
-                data: {}
-            });
-        }).toThrowError('The message has no verb');
+    it('receiveMessage with no verb logs error', function () {
+        spyOn(msgr, 'doError');
+        msgr.receiveMessage({
+            origin: '*',
+            data: {}
+        });
+        expect(msgr.doError).toHaveBeenCalledWith([
+            'Missing message property verb',
+            'Missing message property id',
+            'Missing message property date',
+            'Missing message property type',
+            'Missing message property source',
+            'Missing message property payload'
+        ], false);
     });
-    it('receiveMessage with no id throws error', function () {
-        expect(function () {
-            msgr.receiveMessage({
-                origin: '*',
-                data: {
-                    verb: verb
-                }
-            });
-        }).toThrowError('The message has no id');
+    it('receiveMessage with no id logs error', function () {
+        spyOn(msgr, 'doError');
+        msgr.receiveMessage({
+            origin: '*',
+            data: {
+                verb: verb
+            }
+        });
+        expect(msgr.doError).toHaveBeenCalledWith([
+            'Missing message property id',
+            'Missing message property date',
+            'Missing message property type',
+            'Missing message property source',
+            'Missing message property payload'
+        ], false);
     });
     it('receiveMessage with REQUEST message does not invoke promise function', function () {
         spyOn(msgr, 'invokePromiseFunction');
@@ -171,11 +185,9 @@ describe('Messager', function () {
         msgr.receiveMessage(message);
         expect(msgr.invokePromiseFunction).not.toHaveBeenCalled();
     });
-    // it('receiveMessage rejects promise', () => {        
-    // });
-    it('receiveMessage resolves promise', function (done) {
+    it('receiveMessage rejects promise', function (done) {
         spyOn(msgr, 'createGuid').and.returnValue(id);
-        message.data.type = MessageType.Response;
+        delete message.data.verb;
         var promise = msgr.sendMessage(verb, payload)
             .then(function (data) {
             expect(data.payload.test).toEqual('abc');
@@ -183,6 +195,15 @@ describe('Messager', function () {
         });
         msgr.receiveMessage(message);
     });
+    // it('receiveMessage resolves promise', (done) => {
+    //     spyOn(msgr, 'createGuid').and.returnValue(id);
+    //     const promise = msgr.sendMessage(verb, payload)
+    //         .then((data) => {
+    //             expect(data.payload.test).toEqual('abc');
+    //             done();            
+    //         });
+    //     msgr.receiveMessage(message);        
+    // });
     // it('receiveMessage sends error message', () => {        
     // });
     // it('receiveMessage does not invoke received callback', () => {        

@@ -1,16 +1,16 @@
+interface MessageKey {
+    verb: string,
+    type: MessageType
+}
+
 interface MessagerOptions {
     targetWindow: Window,
     targetOrigin: string,
     messageSource: string,
-    mustLogInfo?: boolean,
     mustLogError?: boolean,
-    messageStructures?: object,
+    mustLogVerbose?: boolean,
+    payloadStructures?: object,
     receivedCallbacks?: object
-}
-
-interface MessageKey {
-    verb: string,
-    type: MessageType
 }
 
 enum MessageType {
@@ -23,12 +23,12 @@ class Messager {
     private targetWindow: Window;
     private targetOrigin: string;
     private messageSource: string;
-    private mustLogInfo: boolean;
     private mustLogError: boolean;
-    private messageStructures = new Map();
+    private mustLogVerbose: boolean;
+    private payloadStructures = new Map();
     private receivedCallbacks = new Map();
     private promises = new Map();
-    private baseMessageStructure = {
+    private messageStructure = {
         verb: 'string',
         id: 'string',
         date: 'string',
@@ -42,13 +42,13 @@ class Messager {
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
         this.messageSource = options.messageSource;
-        this.mustLogInfo = options.mustLogInfo || true;
-        this.mustLogError = options.mustLogError || false;
+        this.mustLogVerbose = options.mustLogVerbose === false ? false : true;
+        this.mustLogError = options.mustLogError === false ? false : true;
 
-        if (options.messageStructures) {
-            for (const key of Object.keys(options.messageStructures)) {
-                this.messageStructures.set(key, Object.assign({}, this.baseMessageStructure,
-                    options.messageStructures[key]))
+        if (options.payloadStructures) {
+            for (const key of Object.keys(options.payloadStructures)) {
+                this.payloadStructures.set(key, Object.assign({}, this.messageStructure,
+                    options.payloadStructures[key]))
             }
         }
 
@@ -58,35 +58,43 @@ class Messager {
             }
         }
 
-        window.addEventListener("message", this.receiveMessage);
+        window.addEventListener('message', this.receiveMessage);
     }
 
     receiveMessage = (message) => {
 
-        if (!this.validateReceivedMessage(message)) {
+        const error = this.validateReceivedMessage(message);
+        if (error) {
+            throw new Error(error);
+        };
+
+        if (!this.validReceivedOrigin(message) ||
+            (this.validateMessage(message.data, this.messageStructure)).length > 0) {
             return;
         }
 
         const data = message.data;
         const key = this.createMessageKey(data.verb, data.type);
 
-        const errors = this.validateMessage(data, this.getMessageStructure(key));
+        const payloadErrors = this.validateMessage(data, this.getPayloadStructure(key));
 
         if (data.type === MessageType.Response) {
-            this.invokePromiseFunction(data, errors.length > 0 ? errors : null);
+            this.invokePromiseFunction(data, payloadErrors.length > 0 ? payloadErrors : null);
         }
 
-        if (errors.length > 0) {
-            // TODO end error message     
+        if (payloadErrors.length > 0) {
+            this.sendMessage(message.verb, this.createPayloadErrorMessage(message, payloadErrors));
+            return;
         }
 
         this.invokeReceivedCallback(key, data.payload);
+
     }
 
     sendMessage = (verb: string, payload: object = null): PromiseLike<{}> => {
 
         if (!verb) {
-            this.doError('Invalid verb parameter');
+            this.logError('Invalid verb parameter');
         }
 
         const id = this.createGuid();
@@ -101,15 +109,19 @@ class Messager {
 
         let errors = [];
 
+        if (!structure) {
+            return errors;
+        }
+
         for (const key of Object.keys(structure)) {
 
             const val1 = structure[key];
-            const val2 = data[key];
+            const val2 = data ? data[key] : null;
             const type1 = this.getType(val1);
-            const type2 = this.getType(val2);
+            const type2 = val2 ? this.getType(val2) : null;
 
             if (!val2) {
-                if (!val1.endsWith('?')) {
+                if ((type1 === 'string' && !val1.endsWith('?')) || type1 !== 'string') {
                     errors.push(`Missing message property ${key}`);
                 }
             }
@@ -126,6 +138,10 @@ class Messager {
                     errors.push(`Message property ${key} is a ${type2} instead of a ${val1}`);
                 }
             }
+        }
+
+        if (errors.length > 0) {
+            this.logError(errors);
         }
 
         return errors;
@@ -158,6 +174,16 @@ class Messager {
         return message;
     }
 
+    private createPayloadErrorMessage = (message: any, errors: object)
+        : object => {
+
+        return this.createMessage(message.verb, message.id, MessageType.Request, message.payload, {
+            errorDescription: "Invalid Payload Structure Received",
+            errors: errors,
+            originalMessageType: message.type
+        });
+    }
+
     private createMessageKey = (verb: string, type: MessageType): MessageKey => {
 
         return {
@@ -176,22 +202,13 @@ class Messager {
         };
     }
 
-    private doError = (message) => {
+    private getPayloadStructure = (key: MessageKey): object => {
 
-        if (this.mustLogError) {
-            console.error('Messager', message);
-        }
-
-        throw new Error(message);
-    }
-
-    private getMessageStructure = (key: MessageKey): object => {
-
-        let structure = this.messageStructures.get(key);
+        let structure = this.payloadStructures.get(key);
 
         if (!structure) {
-            structure = Object.assign({}, this.baseMessageStructure);
-            this.messageStructures.set(key, structure);
+            structure = Object.assign({}, this.messageStructure);
+            this.payloadStructures.set(key, structure);
         }
 
         return structure;
@@ -227,14 +244,21 @@ class Messager {
             fn(data, errors);
         }
         else {
-            this.logInfo(`No Promise for a RESPONSE message with id ${id}`);
+            this.logVerbose(`No Promise for a RESPONSE message with id ${id}`, data);
         }
     }
 
-    private logInfo = (message) => {
+    private logError = (message) => {
 
-        if (this.mustLogInfo) {
-            console.info('Messager', message)
+        if (this.mustLogError) {
+            console.error('Messager', message);
+        }
+    }
+
+    private logVerbose = (message, detail = null) => {
+
+        if (this.mustLogVerbose) {
+            console.info('Messager', message, detail)
         }
     }
 
@@ -242,27 +266,36 @@ class Messager {
         this.targetWindow.postMessage(JSON.stringify(message), this.targetOrigin);
     }
 
-    private validateMessageProperty = (obj: any, props: string[]) => {
+    private validateReceivedMessage = (message): string => {
 
-        props.forEach((prop) => {
-            if (!obj[prop]) {
-                this.doError(`The message has no ${prop}`);
-            }
-        });
-    };
-
-    private validateReceivedMessage = (message): boolean => {
+        let err;
 
         if (!message) {
-            this.doError('Invalid message received');
+            err = 'Invalid message received';
+        }
+        else if (!message.origin) {
+            err = 'Invalid message received. The message has no origin.';
+        }
+        else if (!message.data) {
+            err = 'Invalid message received. The message has no data.';
         }
 
-        if (message.origin && message.origin !== this.targetOrigin) {
+        if (err) {
+            this.logError(err);
+            return err;
+        }
+
+        return '';
+    }
+
+    private validReceivedOrigin = (message): boolean => {
+
+        if (message.origin !== this.targetOrigin) {
+            const text = `The message with origin: ${message.origin} 
+                          is not for this target origin: ${this.targetOrigin}`;
+            this.logVerbose(text, message);
             return false;
         }
-
-        this.validateMessageProperty(message, ['origin', 'data']);
-        this.validateMessageProperty(message.data, ['verb', 'id', 'date', 'type', 'source', 'payload']);
 
         return true;
     }
