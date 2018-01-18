@@ -6,10 +6,10 @@ var MessageType;
 var Messager = /** @class */ (function () {
     function Messager(options) {
         var _this = this;
-        this.messageStructures = new Map();
+        this.payloadStructures = new Map();
         this.receivedCallbacks = new Map();
         this.promises = new Map();
-        this.baseMessageStructure = {
+        this.messageStructure = {
             verb: 'string',
             id: 'string',
             date: 'string',
@@ -18,40 +18,31 @@ var Messager = /** @class */ (function () {
             payload: {}
         };
         this.receiveMessage = function (message) {
-            var err = _this.validateReceivedMessage(message);
-            if (err) {
-                throw new Error(err);
+            var error = _this.validateReceivedMessage(message);
+            if (error) {
+                throw new Error(error);
             }
             ;
-            err = _this.validateReceivedOrigin(message.origin);
-            if (err) {
-                return;
-            }
-            var errs = _this.validateMessage(message.data, _this.baseMessageStructure);
-            if (errs.length > 0) {
+            if (!_this.validReceivedOrigin(message) ||
+                (_this.validateMessage(message.data, _this.messageStructure)).length > 0) {
                 return;
             }
             var data = message.data;
             var key = _this.createMessageKey(data.verb, data.type);
-            var baseErrors = _this.validateMessage(data, _this.baseMessageStructure);
-            if (baseErrors.length > 0) {
-                _this.logError(baseErrors);
-                // TODO send error message
+            var payloadErrors = _this.validateMessage(data, _this.payloadStructures.get(key));
+            if (data.type === MessageType.Response) {
+                _this.invokePromiseFunction(data, payloadErrors.length > 0 ? payloadErrors : null);
+            }
+            if (payloadErrors.length > 0) {
+                _this.sendMessage(message.verb, _this.createPayloadErrorMessage(message, payloadErrors));
                 return;
             }
-            var errors = _this.validateMessage(data, _this.getMessageStructure(key));
-            if (data.type === MessageType.Response) {
-                _this.invokePromiseFunction(data, errors.length > 0 ? errors : null);
-            }
-            // TODO
-            if (errors.length = 0) {
-                _this.invokeReceivedCallback(key, data.payload);
-            }
+            _this.invokeReceivedCallback(key, data.payload);
         };
         this.sendMessage = function (verb, payload) {
             if (payload === void 0) { payload = null; }
             if (!verb) {
-                _this.logError('Invalid verb parameter');
+                _this.logAndThrowError('Invalid verb parameter in sendMessage');
             }
             var id = _this.createGuid();
             return new Promise(function (resolve, reject) {
@@ -71,20 +62,21 @@ var Messager = /** @class */ (function () {
                 var type2 = val2 ? _this.getType(val2) : null;
                 if (!val2) {
                     if ((type1 === 'string' && !val1.endsWith('?')) || type1 !== 'string') {
-                        errors.push("Missing message property " + key);
+                        errors.push("Validate Message. Missing message property " + key);
                     }
                 }
                 else if (type1 === 'array') {
                     if (val1.findIndex(function (x) { return x === val2; }) < 0) {
-                        errors.push("Message property " + key + " with a value of " + val2 + " is not a valid value for " + val1);
+                        errors.push("Validate Message. " +
+                            ("Message property " + key + " with value " + val2 + " does not exist in array [" + val1 + "]"));
                     }
                 }
                 else if (type1 === 'object') {
-                    errors = _this.validateMessage(val2, val1).slice();
+                    errors = errors.concat(_this.validateMessage(val2, val1));
                 }
                 else if (type1 === 'string' && (val1 === 'boolean' || val1 === 'number')) {
                     if (val1 !== type2) {
-                        errors.push("Message property " + key + " is a " + type2 + " instead of a " + val1);
+                        errors.push("Validate Message. Message property " + key + " is a " + type2 + " instead of a " + val1);
                     }
                 }
             };
@@ -105,12 +97,15 @@ var Messager = /** @class */ (function () {
                 + s4() + "-" + s4() + s4() + s4();
         };
         this.createMessage = function (verb, id, type, payload, error) {
+            if (id === void 0) { id = null; }
+            if (type === void 0) { type = null; }
+            if (payload === void 0) { payload = null; }
             if (error === void 0) { error = null; }
             var message = {
                 verb: verb,
-                id: id,
+                id: id || _this.createGuid(),
                 date: new Date().toLocaleString(),
-                type: type,
+                type: type || MessageType.Request,
                 source: _this.messageSource,
                 payload: payload || {}
             };
@@ -125,13 +120,12 @@ var Messager = /** @class */ (function () {
                 type: type
             };
         };
-        this.getMessageStructure = function (key) {
-            var structure = _this.messageStructures.get(key);
-            if (!structure) {
-                structure = Object.assign({}, _this.baseMessageStructure);
-                _this.messageStructures.set(key, structure);
-            }
-            return structure;
+        this.createPayloadErrorMessage = function (message, errors) {
+            return _this.createMessage(message.verb, _this.createGuid(), MessageType.Request, message.payload, {
+                errorDescription: 'Invalid Payload Structure Received',
+                errors: errors,
+                originalMessage: message
+            });
         };
         this.getType = function (val) {
             if (Array.isArray(val)) {
@@ -149,13 +143,12 @@ var Messager = /** @class */ (function () {
             }
         };
         this.invokePromiseFunction = function (data, errors) {
-            var id = data.id;
-            var fn = _this.promises.get(id);
+            var fn = _this.promises.get(data.id);
             if (fn) {
                 fn(data, errors);
             }
             else {
-                _this.logInfo("No Promise for a RESPONSE message with id " + id);
+                _this.logVerbose("No Promise for a RESPONSE message with id " + data.id, data);
             }
         };
         this.logError = function (message) {
@@ -163,9 +156,14 @@ var Messager = /** @class */ (function () {
                 console.error('Messager', message);
             }
         };
-        this.logInfo = function (message) {
-            if (_this.mustLogInfo) {
-                console.info('Messager', message);
+        this.logAndThrowError = function (message) {
+            _this.logError(message);
+            throw new Error(message);
+        };
+        this.logVerbose = function (message, detail) {
+            if (detail === void 0) { detail = null; }
+            if (_this.mustLogVerbose) {
+                console.info('Messager', message, detail);
             }
         };
         this.postMessage = function (message) {
@@ -188,23 +186,23 @@ var Messager = /** @class */ (function () {
             }
             return '';
         };
-        this.validateReceivedOrigin = function (origin) {
-            if (origin !== _this.targetOrigin) {
-                var err = "Invalid message received. \n                         The origin " + origin + " does not equal the target origin " + _this.targetOrigin;
-                _this.logError(err);
-                return err;
+        this.validReceivedOrigin = function (message) {
+            if (message.origin !== _this.targetOrigin) {
+                var text = "The message with origin: " + message.origin + " \n                          is not for this target origin: " + _this.targetOrigin;
+                _this.logVerbose(text, message);
+                return false;
             }
-            return '';
+            return true;
         };
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
         this.messageSource = options.messageSource;
-        this.mustLogInfo = options.mustLogInfo === false ? false : true;
         this.mustLogError = options.mustLogError === false ? false : true;
-        if (options.messageStructures) {
-            for (var _i = 0, _a = Object.keys(options.messageStructures); _i < _a.length; _i++) {
+        this.mustLogVerbose = options.mustLogVerbose === false ? false : true;
+        if (options.payloadStructures) {
+            for (var _i = 0, _a = Object.keys(options.payloadStructures); _i < _a.length; _i++) {
                 var key = _a[_i];
-                this.messageStructures.set(key, Object.assign({}, this.baseMessageStructure, options.messageStructures[key]));
+                this.payloadStructures.set(key, options.payloadStructures[key]);
             }
         }
         if (options.receivedCallbacks) {
