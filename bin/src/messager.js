@@ -7,8 +7,8 @@ var Messager = /** @class */ (function () {
     function Messager(options) {
         var _this = this;
         this.payloadStructures = new Map();
-        this.receivedCallbacks = new Map();
-        this.promises = new Map();
+        this.requestCallbacks = new Map();
+        this.responsePromises = new Map();
         this.messageStructure = {
             verb: 'string',
             id: 'string',
@@ -18,43 +18,41 @@ var Messager = /** @class */ (function () {
             payload: {}
         };
         this.receiveMessage = function (message) {
-            var error = _this.validateReceivedMessage(message);
-            if (error) {
-                throw new Error(error);
-            }
-            ;
+            _this.validateReceivedMessage(message);
             if (!_this.validReceivedOrigin(message) ||
                 (_this.validateMessage(message.data, _this.messageStructure)).length > 0) {
                 return;
             }
             var data = message.data;
             var key = _this.createMessageKey(data.verb, data.type);
-            var payloadErrors = _this.validateMessage(data, _this.payloadStructures.get(key));
-            if (data.type === MessageType.Response) {
-                _this.invokePromiseFunction(data, payloadErrors.length > 0 ? payloadErrors : null);
+            var payloadErrors = _this.validateMessage(data.payload, _this.payloadStructures.get(key));
+            if (payloadErrors) {
+                _this.sendMessage(message.verb, _this.createErrorPayload('Invalid Payload Received', message.payload, payloadErrors));
             }
-            if (payloadErrors.length > 0) {
-                _this.sendMessage(message.verb, _this.createPayloadErrorMessage(message, payloadErrors));
-                return;
+            if (data.type === MessageType.Request && !payloadErrors) {
+                _this.invokeRequestCallback(message);
             }
-            _this.invokeReceivedCallback(key, data.payload);
+            else if (data.type = MessageType.Response) {
+                _this.invokeResponsePromise(message, payloadErrors.length > 0 ? payloadErrors : null);
+            }
         };
-        this.sendMessage = function (verb, payload) {
+        this.sendMessage = function (verb, payload, errors) {
             if (payload === void 0) { payload = null; }
+            if (errors === void 0) { errors = null; }
             if (!verb) {
                 _this.logAndThrowError('Invalid verb parameter in sendMessage');
             }
             var id = _this.createGuid();
             return new Promise(function (resolve, reject) {
-                _this.promises.set(id, _this.createPromiseFunction(resolve, reject));
-                _this.postMessage(_this.createMessage(verb, id, MessageType.Request, payload));
+                _this.responsePromises.set(id, _this.createPromiseFunction(resolve, reject));
+                _this.postMessage(_this.createMessage(verb, id, MessageType.Request, payload, errors));
             });
         };
         this.validateMessage = function (data, structure) {
-            var errors = [];
             if (!structure) {
-                return errors;
+                return [];
             }
+            var errors = [];
             var _loop_1 = function (key) {
                 var val1 = structure[key];
                 var val2 = data ? data[key] : null;
@@ -96,6 +94,13 @@ var Messager = /** @class */ (function () {
             return s4() + s4() + "-" + s4() + "-" + s4() + "-"
                 + s4() + "-" + s4() + s4() + s4();
         };
+        this.createErrorPayload = function (description, errors, originalMessage) {
+            return {
+                errorDescription: description,
+                errors: errors,
+                originalMessage: originalMessage
+            };
+        };
         this.createMessage = function (verb, id, type, payload, error) {
             if (id === void 0) { id = null; }
             if (type === void 0) { type = null; }
@@ -120,13 +125,6 @@ var Messager = /** @class */ (function () {
                 type: type
             };
         };
-        this.createPayloadErrorMessage = function (message, errors) {
-            return _this.createMessage(message.verb, _this.createGuid(), MessageType.Request, message.payload, {
-                errorDescription: 'Invalid Payload Structure Received',
-                errors: errors,
-                originalMessage: message
-            });
-        };
         this.getType = function (val) {
             if (Array.isArray(val)) {
                 return 'array';
@@ -136,16 +134,29 @@ var Messager = /** @class */ (function () {
             }
             return typeof val;
         };
-        this.invokeReceivedCallback = function (key, payload) {
-            var callback = _this.receivedCallbacks.get(key);
+        this.invokeRequestCallback = function (message) {
+            var callback = _this.requestCallbacks.get(message.verb);
             if (callback) {
-                callback(payload);
+                try {
+                    callback(message.data.payload);
+                }
+                catch (error) {
+                    _this.logError(error);
+                    _this.sendMessage(message.verb, _this.createErrorPayload('Error Invoking Request Callback', error, message));
+                }
             }
         };
-        this.invokePromiseFunction = function (data, errors) {
-            var fn = _this.promises.get(data.id);
+        this.invokeResponsePromise = function (message, errors) {
+            var data = message.data;
+            var fn = _this.responsePromises.get(data.id);
             if (fn) {
-                fn(data, errors);
+                try {
+                    fn(data.payload, errors);
+                }
+                catch (error) {
+                    _this.logError(error);
+                    _this.sendMessage(message.verb, _this.createErrorPayload('Error Invoking Response Promise', error, message));
+                }
             }
             else {
                 _this.logVerbose("No Promise for a RESPONSE message with id " + data.id, data);
@@ -170,25 +181,20 @@ var Messager = /** @class */ (function () {
             _this.targetWindow.postMessage(JSON.stringify(message), _this.targetOrigin);
         };
         this.validateReceivedMessage = function (message) {
-            var err;
             if (!message) {
-                err = 'Invalid message received';
+                _this.logAndThrowError('Invalid message received');
             }
             else if (!message.origin) {
-                err = 'Invalid message received. The message has no origin.';
+                _this.logAndThrowError('Invalid message received. The message has no origin.');
             }
             else if (!message.data) {
-                err = 'Invalid message received. The message has no data.';
+                _this.logAndThrowError('Invalid message received. The message has no data.');
             }
-            if (err) {
-                _this.logError(err);
-                return err;
-            }
-            return '';
         };
         this.validReceivedOrigin = function (message) {
             if (message.origin !== _this.targetOrigin) {
-                var text = "The message with origin: " + message.origin + " \n                          is not for this target origin: " + _this.targetOrigin;
+                var text = "The message with origin: " + message.origin +
+                    ("is not for this target origin: " + _this.targetOrigin);
                 _this.logVerbose(text, message);
                 return false;
             }
@@ -205,10 +211,10 @@ var Messager = /** @class */ (function () {
                 this.payloadStructures.set(key, options.payloadStructures[key]);
             }
         }
-        if (options.receivedCallbacks) {
-            for (var _b = 0, _c = Object.keys(options.receivedCallbacks); _b < _c.length; _b++) {
+        if (options.requestCallbacks) {
+            for (var _b = 0, _c = Object.keys(options.requestCallbacks); _b < _c.length; _b++) {
                 var key = _c[_b];
-                this.receivedCallbacks.set(key, options.receivedCallbacks[key]);
+                this.requestCallbacks.set(key, options.requestCallbacks[key]);
             }
         }
         window.addEventListener('message', this.receiveMessage);

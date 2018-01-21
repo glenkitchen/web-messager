@@ -15,7 +15,7 @@ interface MessagerOptions {
     mustLogError?: boolean,
     mustLogVerbose?: boolean,
     payloadStructures?: object,
-    receivedCallbacks?: object
+    requestCallbacks?: object
 }
 
 class Messager {
@@ -25,8 +25,8 @@ class Messager {
     private mustLogError: boolean;
     private mustLogVerbose: boolean;
     private payloadStructures = new Map();
-    private receivedCallbacks = new Map();
-    private promises = new Map();
+    private requestCallbacks = new Map();
+    private responsePromises = new Map();
     private messageStructure = {
         verb: 'string',
         id: 'string',
@@ -49,9 +49,9 @@ class Messager {
             }
         }
 
-        if (options.receivedCallbacks) {
-            for (const key of Object.keys(options.receivedCallbacks)) {
-                this.receivedCallbacks.set(key, options.receivedCallbacks[key]);
+        if (options.requestCallbacks) {
+            for (const key of Object.keys(options.requestCallbacks)) {
+                this.requestCallbacks.set(key, options.requestCallbacks[key]);
             }
         }
 
@@ -59,11 +59,7 @@ class Messager {
     }
 
     receiveMessage = (message) => {
-
-        const error = this.validateReceivedMessage(message);
-        if (error) {
-            throw new Error(error);
-        };
+        this.validateReceivedMessage(message);
 
         if (!this.validReceivedOrigin(message) ||
             (this.validateMessage(message.data, this.messageStructure)).length > 0) {
@@ -72,22 +68,24 @@ class Messager {
 
         const data = message.data;
         const key = this.createMessageKey(data.verb, data.type);
-
-        const payloadErrors = this.validateMessage(data, this.payloadStructures.get(key));
-
-        if (data.type === MessageType.Response) {
-            this.invokePromiseFunction(data, payloadErrors.length > 0 ? payloadErrors : null);
+        
+        const payloadErrors = this.validateMessage(data.payload, this.payloadStructures.get(key));        
+        if (payloadErrors) {
+            this.sendMessage(message.verb, this.createErrorPayload(
+                'Invalid Payload Received', message.payload, payloadErrors));
         }
 
-        if (payloadErrors.length > 0) {
-            this.sendMessage(message.verb, this.createPayloadErrorMessage(message, payloadErrors));
-            return;
-        }
+        if (data.type === MessageType.Request && !payloadErrors) {
+            this.invokeRequestCallback(message);
 
-        this.invokeReceivedCallback(key, data.payload);
+            
+        }
+        else if (data.type = MessageType.Response) {
+            this.invokeResponsePromise(message, payloadErrors.length > 0 ? payloadErrors : null);
+        }
     }
 
-    sendMessage = (verb: string, payload: object = null): PromiseLike<{}> => {
+    sendMessage = (verb: string, payload: object = null, errors: object = null): PromiseLike<{}> => {
         if (!verb) {
             this.logAndThrowError('Invalid verb parameter in sendMessage');
         }
@@ -95,17 +93,17 @@ class Messager {
         const id = this.createGuid();
 
         return new Promise((resolve, reject) => {
-            this.promises.set(id, this.createPromiseFunction(resolve, reject));
-            this.postMessage(this.createMessage(verb, id, MessageType.Request, payload));
+            this.responsePromises.set(id, this.createPromiseFunction(resolve, reject));
+            this.postMessage(this.createMessage(verb, id, MessageType.Request, payload, errors));
         });
     }
 
     validateMessage = (data: object, structure: object): string[] => {
-        let errors = [];
-
         if (!structure) {
-            return errors;
+            return [];
         }
+
+        let errors = [];
 
         for (const key of Object.keys(structure)) {
             const val1 = structure[key];
@@ -151,6 +149,14 @@ class Messager {
             + s4() + "-" + s4() + s4() + s4();
     }
 
+    private createErrorPayload = (description: string, errors: object, originalMessage: object): object => {
+        return {
+            errorDescription: description,
+            errors: errors,
+            originalMessage: originalMessage
+        };
+    }
+
     private createMessage = (verb: string, id: string = null, type: MessageType = null,
         payload: object = null, error: object = null)
         : object => {
@@ -177,16 +183,6 @@ class Messager {
         }
     }
 
-    private createPayloadErrorMessage = (message: any, errors: object)
-        : object => {
-
-        return this.createMessage(message.verb, this.createGuid(), MessageType.Request, message.payload, {
-            errorDescription: 'Invalid Payload Structure Received',
-            errors: errors,
-            originalMessage: message
-        });
-    }
-
     private createPromiseFunction(resolve: (data?) => void, reject: (error?) => void) {
         return (data, error) => {
             if (error) {
@@ -206,21 +202,32 @@ class Messager {
         return typeof val;
     }
 
-    private invokeReceivedCallback = (key: MessageKey, payload: object) => {
-
-        const callback = this.receivedCallbacks.get(key);
+    private invokeRequestCallback = (message) => {
+        const callback = this.requestCallbacks.get(message.verb);
 
         if (callback) {
-            callback(payload);
+            try {
+                callback(message.data.payload);
+            } catch (error) {
+                this.logError(error);
+                this.sendMessage(message.verb,
+                    this.createErrorPayload('Error Invoking Request Callback', error, message));
+            }
         }
     }
 
-    private invokePromiseFunction = (data: any, errors: string[]) => {
-
-        const fn = this.promises.get(data.id);
+    private invokeResponsePromise = (message, errors) => {
+        const data = message.data;
+        const fn = this.responsePromises.get(data.id);
 
         if (fn) {
-            fn(data, errors);
+            try {
+                fn(data.payload, errors);
+            } catch (error) {
+                this.logError(error);
+                this.sendMessage(message.verb,
+                    this.createErrorPayload('Error Invoking Response Promise', error, message));
+            }
         }
         else {
             this.logVerbose(`No Promise for a RESPONSE message with id ${data.id}`, data);
@@ -248,37 +255,25 @@ class Messager {
         this.targetWindow.postMessage(JSON.stringify(message), this.targetOrigin);
     }
 
-    private validateReceivedMessage = (message): string => {
-
-        let err;
-
+    private validateReceivedMessage = (message) => {
         if (!message) {
-            err = 'Invalid message received';
+            this.logAndThrowError('Invalid message received');
         }
         else if (!message.origin) {
-            err = 'Invalid message received. The message has no origin.';
+            this.logAndThrowError('Invalid message received. The message has no origin.');
         }
         else if (!message.data) {
-            err = 'Invalid message received. The message has no data.';
+            this.logAndThrowError('Invalid message received. The message has no data.');
         }
-
-        if (err) {
-            this.logError(err);
-            return err;
-        }
-
-        return '';
     }
 
     private validReceivedOrigin = (message): boolean => {
-
         if (message.origin !== this.targetOrigin) {
-            const text = `The message with origin: ${message.origin} 
-                          is not for this target origin: ${this.targetOrigin}`;
+            const text = `The message with origin: ${message.origin}` +
+                `is not for this target origin: ${this.targetOrigin}`;
             this.logVerbose(text, message);
             return false;
         }
-
         return true;
     }
 }
