@@ -10,12 +10,16 @@ Overview
 /**
  * TODO
  * 
- *  log/trace, validation, error handling and reject
- *  
+ *  payloadStructuresMap 
+ *    object to map 
+ *    (this.validateMessage(message.data, messageStructure)).length > 0) {
+ * 
  *  destroy
  * 
  *  unit test
+      receiveMessage with payload errors sends error message        
  *  interacive test
+ *    example library
  * 
  *  documentation
  *  type definitions 

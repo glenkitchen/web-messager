@@ -206,93 +206,64 @@ describe('Messager', () => {
 
         expect(msgr.logVerbose).toHaveBeenCalled();
         expect(msgr.createMessageKey).not.toHaveBeenCalled();
+    });
 
+    it('receiveMessage with no verb logs error', () => {
+        spyOn(msgr, 'logError');
+
+        msgr.receiveMessage({
+            origin: '*',
+            data: {}
+        })
+
+        expect(msgr.logError).toHaveBeenCalledWith([
+            'Validate Message. Missing message property verb',
+            'Validate Message. Missing message property id',
+            'Validate Message. Missing message property date',
+            'Validate Message. Missing message property type',
+            'Validate Message. Missing message property source',
+            'Validate Message. Missing message property payload']);
+    });
+
+    it('receiveMessage with no id logs error', () => {
+        spyOn(msgr, 'logError');
+
+        msgr.receiveMessage({
+            origin: '*',
+            data: {
+                verb: verb
+            }
+        })
+
+        expect(msgr.logError).toHaveBeenCalledWith([
+            'Validate Message. Missing message property id',
+            'Validate Message. Missing message property date',
+            'Validate Message. Missing message property type',
+            'Validate Message. Missing message property source',
+            'Validate Message. Missing message property payload']);
     });
 
     it('receiveMessage creates a message key', () => {
-         spyOn(msgr, 'createMessageKey');
+          spyOn(msgr, 'createMessageKey');
 
+          msgr.receiveMessage(message);
+
+          expect(msgr.createMessageKey).toHaveBeenCalledWith(verb, MessageType.Response);
+    });
+    
+     it('receiveMessage with REQUEST type invokes request callback method', () => {
+         spyOn(msgr, 'invokeRequestCallback');
+         message.data.type = MessageType.Request;    
          msgr.receiveMessage(message);
-
-    //     expect(msgr.createMessageKey).toHaveBeenCalledWith(verb, MessageType.Response);
+        
+         expect(msgr.invokeRequestCallback).toHaveBeenCalled();
     });
 
-    // it('receiveMessage with no verb logs error', () => {
-    //     spyOn(msgr, 'logError');
-
-    //     msgr.receiveMessage({
-    //         origin: '*',
-    //         data: {}
-    //     })
-
-    //     expect(msgr.logError).toHaveBeenCalledWith([
-    //         'Validate Message. Missing message property verb',
-    //         'Validate Message. Missing message property id',
-    //         'Validate Message. Missing message property date',
-    //         'Validate Message. Missing message property type',
-    //         'Validate Message. Missing message property source',
-    //         'Validate Message. Missing message property payload']);
-    // });
-
-    // it('receiveMessage with no id logs error', () => {
-    //     spyOn(msgr, 'logError');
-
-    //     msgr.receiveMessage({
-    //         origin: '*',
-    //         data: {
-    //             verb: verb
-    //         }
-    //     })
-
-    //     expect(msgr.logError).toHaveBeenCalledWith([
-    //         'Validate Message. Missing message property id',
-    //         'Validate Message. Missing message property date',
-    //         'Validate Message. Missing message property type',
-    //         'Validate Message. Missing message property source',
-    //         'Validate Message. Missing message property payload']);
-    // });
-    
-    // it('receiveMessage with REQUEST message does not invoke promise function', () => {
-    //     spyOn(msgr, 'invokeResponsePromise');
-    //     message.data.type = MessageType.Request;
-
-    //     msgr.receiveMessage(message);
-
-    //     expect(msgr.invokeResponsePromise).not.toHaveBeenCalled();
-    // });
-
-    // it('receiveMessage with errors rejects promise', (done) => {
-    //     const error = ['Validate Message. Message property testBoolean is a string instead of a boolean'];
-    //     spyOn(msgr, 'createGuid').and.returnValue(id);        
-    //     spyOn(msgr, 'validateMessage').and.returnValue(error)
-
-    //     msgr.sendMessage(verb, payload)
-    //         .then(
-    //         data => { }
-    //         ,err => {
-    //             expect(err).toEqual(err);
-    //             done();
-    //         });
-    //     msgr.receiveMessage(message);
-    // });
-
-    // it('receiveMessage resolves promise', (done) => {
-    //     spyOn(msgr, 'createGuid').and.returnValue(id);
-
-    //     msgr.sendMessage(verb, payload)
-    //         .then(data => {
-    //             expect(data.payload.test).toEqual('abc');
-    //             done();
-    //         });
-    //     msgr.receiveMessage(message);
-    // });
-
-    // it('receiveMessage with error sends error message', () => {        
-    // });
-
-    // it('receiveMessage without received callback does not invoke a callback', () => {        
-    // });
-
-    // it('receiveMessage invokes received callback', () => {        
-    // });
+    it('receiveMessage with RESPONSE type invokes response promise', () => {
+        spyOn(msgr, 'invokeResponsePromise');
+                
+        msgr.receiveMessage(message);
+        
+        expect(msgr.invokeResponsePromise).toHaveBeenCalledWith(message, null);
+    });
 });

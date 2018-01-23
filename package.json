@@ -33,8 +33,9 @@
     "jasmine-core": "^2.8.0",
     "karma": "^2.0.0",
     "karma-chrome-launcher": "^2.2.0",
-    "karma-html-reporter": "^0.2.7",
     "karma-jasmine": "^1.1.1"
   },
-  "dependencies": {}
+  "dependencies": {
+    "karma-html-reporter": "^0.2.7"
+  }
 }

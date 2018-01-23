@@ -9,43 +9,43 @@ var Messager = /** @class */ (function () {
         this.payloadStructures = new Map();
         this.requestCallbacks = new Map();
         this.responsePromises = new Map();
-        this.messageStructure = {
-            verb: 'string',
-            id: 'string',
-            date: 'string',
-            type: ['REQUEST', 'RESPONSE'],
-            source: 'string',
-            payload: {}
-        };
         this.receiveMessage = function (message) {
             _this.validateReceivedMessage(message);
+            var messageStructure = {
+                verb: 'string',
+                id: 'string',
+                date: 'string',
+                type: ['REQUEST', 'RESPONSE'],
+                source: 'string',
+                payload: {}
+            };
             if (!_this.validReceivedOrigin(message) ||
-                (_this.validateMessage(message.data, _this.messageStructure)).length > 0) {
+                (_this.validateMessage(message.data, messageStructure)).length > 0) {
                 return;
             }
             var data = message.data;
             var key = _this.createMessageKey(data.verb, data.type);
             var payloadErrors = _this.validateMessage(data.payload, _this.payloadStructures.get(key));
-            if (payloadErrors) {
-                _this.sendMessage(message.verb, _this.createErrorPayload('Invalid Payload Received', message.payload, payloadErrors));
+            if (payloadErrors.length > 0) {
+                _this.sendMessage(message.verb, _this.createErrorObject('Invalid Payload Received', payloadErrors, message.data));
             }
-            if (data.type === MessageType.Request && !payloadErrors) {
+            if (data.type === MessageType.Request && payloadErrors.length === 0) {
                 _this.invokeRequestCallback(message);
             }
             else if (data.type = MessageType.Response) {
                 _this.invokeResponsePromise(message, payloadErrors.length > 0 ? payloadErrors : null);
             }
         };
-        this.sendMessage = function (verb, payload, errors) {
+        this.sendMessage = function (verb, payload, error) {
             if (payload === void 0) { payload = null; }
-            if (errors === void 0) { errors = null; }
+            if (error === void 0) { error = null; }
             if (!verb) {
                 _this.logAndThrowError('Invalid verb parameter in sendMessage');
             }
             var id = _this.createGuid();
             return new Promise(function (resolve, reject) {
                 _this.responsePromises.set(id, _this.createPromiseFunction(resolve, reject));
-                _this.postMessage(_this.createMessage(verb, id, MessageType.Request, payload, errors));
+                _this.postMessage(_this.createMessage(verb, id, MessageType.Request, payload, error));
             });
         };
         this.validateMessage = function (data, structure) {
@@ -94,7 +94,7 @@ var Messager = /** @class */ (function () {
             return s4() + s4() + "-" + s4() + "-" + s4() + "-"
                 + s4() + "-" + s4() + s4() + s4();
         };
-        this.createErrorPayload = function (description, errors, originalMessage) {
+        this.createErrorObject = function (description, errors, originalMessage) {
             return {
                 errorDescription: description,
                 errors: errors,
@@ -142,7 +142,7 @@ var Messager = /** @class */ (function () {
                 }
                 catch (error) {
                     _this.logError(error);
-                    _this.sendMessage(message.verb, _this.createErrorPayload('Error Invoking Request Callback', error, message));
+                    _this.sendMessage(message.verb, _this.createErrorObject('Error Invoking Request Callback', error, message));
                 }
             }
         };
@@ -155,7 +155,7 @@ var Messager = /** @class */ (function () {
                 }
                 catch (error) {
                     _this.logError(error);
-                    _this.sendMessage(message.verb, _this.createErrorPayload('Error Invoking Response Promise', error, message));
+                    _this.sendMessage(message.verb, _this.createErrorObject('Error Invoking Response Promise', error, message));
                 }
             }
             else {
