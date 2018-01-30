@@ -4,20 +4,18 @@ Helper library for web messaging i.e. window.postMessage()
 
 Overview
 --------
-* Pre-defined JSON-like message structure
+* A JSON-like message syntax enables declarative validation. 
 * Request-response roundtrips with Promises
 
 /**
  * TODO
  * 
- *  payloadStructuresMap 
- *    object to map 
- *    (this.validateMessage(message.data, messageStructure)).length > 0) {
+ * Object.assign({}, defaultOptions, options); 
  * 
- *  destroy
+ * destroy
  * 
- *  unit test
-      receiveMessage with payload errors sends error message        
+ * unit test
+ *    receiveMessage with payload errors sends error message        
  *  interacive test
  *    example library
  * 

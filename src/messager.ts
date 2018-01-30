@@ -45,6 +45,7 @@ class Messager {
     private responsePromises = new Map();
 
     constructor(options: MessagerOptions) {
+
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
         this.messageSource = options.messageSource;
@@ -66,9 +67,25 @@ class Messager {
         window.addEventListener('message', this.receiveMessage);
     }
 
-    receiveMessage = (message) : void => {
-        this.validateReceivedMessage(message);
+    receiveMessage = (messageEvent: MessageEvent): void => {
+        const messageEventError = this.validateMessageEvent(messageEvent);
+        if (messageEventError) {
+            this.logAndThrowError(messageEventError);
+        }
 
+        const originValidationMessage = this.validateMessageEventOrigin(messageEvent);
+        if (originValidationMessage) {
+            this.logVerbose(originValidationMessage)
+            return;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(messageEvent.data);    
+        } catch (error) {
+           this.logAndThrowError(error); 
+        }
+        
         const messageStructure = {
             verb: 'string',
             id: 'string',
@@ -77,26 +94,23 @@ class Messager {
             source: 'string',
             payload: {}
         };
-
-        if (!this.validReceivedOrigin(message) ||
-            (this.validateMessage(message.data, messageStructure)).length > 0) {
+        if ((this.validateMessage(data, messageStructure)).length > 0) {
             return;
         }
-
-        const data = message.data;
+                
         const key = this.createMessageKey(data.verb, data.type);
 
         const payloadErrors = this.validateMessage(data.payload, this.payloadStructures.get(key));
         if (payloadErrors.length > 0) {
-            this.sendMessage(message.verb, this.createErrorObject(
-                'Invalid Payload Received', payloadErrors, message.data, ));
+            this.sendMessage(data.verb, this.createErrorObject(
+                'Invalid Payload Received', payloadErrors, messageEvent.data, ));
         }
 
         if (data.type === MessageType.Request && payloadErrors.length === 0) {
-            this.invokeRequestCallback(message);
+            this.invokeRequestCallback(messageEvent);
         }
         else if (data.type = MessageType.Response) {
-            this.invokeResponsePromise(message, payloadErrors.length > 0 ? payloadErrors : null);
+            this.invokeResponsePromise(messageEvent, payloadErrors.length > 0 ? payloadErrors : null);
         }
     }
 
@@ -152,6 +166,19 @@ class Messager {
         }
 
         return errors;
+    }
+
+    validateMessageEvent = (messageEvent: MessageEvent): string => {
+        if (!messageEvent) {
+            return 'Invalid MessageEvent. The MessageEvent is falsy.';
+        }
+        else if (!messageEvent.origin) {
+            return 'Invalid MessageEvent. The MessageEvent has no origin.';
+        }
+        else if (!messageEvent.data) {
+            return 'Invalid MessageEvent. The MessageEvent has no data.';
+        }
+        return '';
     }
 
     private createGuid = (): string => {
@@ -270,25 +297,11 @@ class Messager {
         this.targetWindow.postMessage(JSON.stringify(message), this.targetOrigin);
     }
 
-    private validateReceivedMessage = (message): void => {
-        if (!message) {
-            this.logAndThrowError('Invalid message received');
+    private validateMessageEventOrigin = (messageEvent: MessageEvent): string => {
+        if (messageEvent.origin !== this.targetOrigin) {
+            return `The message with origin: ${messageEvent.origin}` +
+                `is not for this target origin: ${this.targetOrigin}`
         }
-        else if (!message.origin) {
-            this.logAndThrowError('Invalid message received. The message has no origin.');
-        }
-        else if (!message.data) {
-            this.logAndThrowError('Invalid message received. The message has no data.');
-        }
-    }
-
-    private validReceivedOrigin = (message): boolean => {
-        if (message.origin !== this.targetOrigin) {
-            const text = `The message with origin: ${message.origin}` +
-                `is not for this target origin: ${this.targetOrigin}`;
-            this.logVerbose(text, message);
-            return false;
-        }
-        return true;
+        return '';
     }
 }

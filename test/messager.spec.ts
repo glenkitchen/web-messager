@@ -29,16 +29,17 @@ describe('Messager', () => {
         source = 'TestSource';
         payload = { test: 'abc' };
 
+        const data = JSON.stringify({
+            verb: verb,
+            id: id,
+            date: date,
+            type: type,
+            source: source,
+            payload: payload
+        });
         message = {
             origin: '*',
-            data: {
-                verb: verb,
-                id: id,
-                date: date,
-                type: type,
-                source: source,
-                payload: payload
-            }
+            data: data
         };
 
         structure = {
@@ -50,21 +51,15 @@ describe('Messager', () => {
             }
         };
 
+        spyOn(msgr, 'createGuid').and.returnValue(id);
+
     })
 
     it('sendMessage called without a verb throws error', () => {
         expect(() => { msgr.sendMessage(null) })
             .toThrowError('Invalid verb parameter in sendMessage');
     });
-
-    it('sendMessage creates a Guid', () => {
-        spyOn(msgr, 'createGuid');
-
-        msgr.sendMessage(verb, payload);
-
-        expect(msgr.createGuid).toHaveBeenCalled();
-    });
-
+    
     it('sendMessage creates a promise function', () => {
         spyOn(msgr, 'createPromiseFunction');
 
@@ -74,7 +69,6 @@ describe('Messager', () => {
     });
 
     it('sendMessage creates a message', () => {
-        spyOn(msgr, 'createGuid').and.returnValue(id);
         spyOn(msgr, 'createMessage');
 
         msgr.sendMessage(verb, payload);
@@ -176,22 +170,20 @@ describe('Messager', () => {
         expect(errors.length).toEqual(0);
     });
 
-    it('receiveMessage with no message throws error', () => {
+    it('receiveMessage with no MessageEvent throws error', () => {
         expect(() => { msgr.receiveMessage(null) })
-            .toThrowError('Invalid message received');
+            .toThrowError('Invalid MessageEvent. The MessageEvent is falsy.');
     });
 
-    it('receiveMessage with no origin throws error', () => {
+    it('receiveMessage with no MessageEvent origin throws error', () => {
         expect(() => { msgr.receiveMessage({}) })
-            .toThrowError('Invalid message received. The message has no origin.');
+            .toThrowError('Invalid MessageEvent. The MessageEvent has no origin.');
     });
 
-    it('receiveMessage with no data throws error', () => {
+    it('receiveMessage with no MessageEvent data throws error', () => {
         expect(() => {
-            msgr.receiveMessage({
-                origin: '*'
-            })
-        }).toThrowError('Invalid message received. The message has no data.');
+            msgr.receiveMessage({ origin: '*' })
+        }).toThrowError('Invalid MessageEvent. The MessageEvent has no data.');
     });
 
     it('receiveMessage with another origin does not process message', () => {
@@ -208,31 +200,22 @@ describe('Messager', () => {
         expect(msgr.createMessageKey).not.toHaveBeenCalled();
     });
 
-    it('receiveMessage with no verb logs error', () => {
+    it('receiveMessage with invalid JSON data throws error', () => {
         spyOn(msgr, 'logError');
 
-        msgr.receiveMessage({
+        expect(() => msgr.receiveMessage({
             origin: '*',
             data: {}
-        })
-
-        expect(msgr.logError).toHaveBeenCalledWith([
-            'Validate Message. Missing message property verb',
-            'Validate Message. Missing message property id',
-            'Validate Message. Missing message property date',
-            'Validate Message. Missing message property type',
-            'Validate Message. Missing message property source',
-            'Validate Message. Missing message property payload']);
+        })).toThrowError('SyntaxError: Unexpected token o in JSON at position 1');
     });
 
     it('receiveMessage with no id logs error', () => {
         spyOn(msgr, 'logError');
 
+        const data = JSON.stringify({ verb: verb });
         msgr.receiveMessage({
             origin: '*',
-            data: {
-                verb: verb
-            }
+            data: data
         })
 
         expect(msgr.logError).toHaveBeenCalledWith([
@@ -244,26 +227,37 @@ describe('Messager', () => {
     });
 
     it('receiveMessage creates a message key', () => {
-          spyOn(msgr, 'createMessageKey');
+        spyOn(msgr, 'createMessageKey');
 
-          msgr.receiveMessage(message);
+        msgr.receiveMessage(message);
 
-          expect(msgr.createMessageKey).toHaveBeenCalledWith(verb, MessageType.Response);
+        expect(msgr.createMessageKey).toHaveBeenCalledWith(verb, MessageType.Response);
     });
-    
-     it('receiveMessage with REQUEST type invokes request callback method', () => {
-         spyOn(msgr, 'invokeRequestCallback');
-         message.data.type = MessageType.Request;    
-         msgr.receiveMessage(message);
-        
-         expect(msgr.invokeRequestCallback).toHaveBeenCalled();
+
+    it('receiveMessage with REQUEST type invokes request callback method', () => {
+        spyOn(msgr, 'invokeRequestCallback');
+        const data = JSON.stringify({
+            verb: verb,
+            id: id,
+            date: date,
+            type: MessageType.Request,
+            source: source,
+            payload: payload
+        });
+        const message = {
+            origin: '*',
+            data: data
+        };
+        msgr.receiveMessage(message);
+
+        expect(msgr.invokeRequestCallback).toHaveBeenCalled();
     });
 
     it('receiveMessage with RESPONSE type invokes response promise', () => {
         spyOn(msgr, 'invokeResponsePromise');
-                
+
         msgr.receiveMessage(message);
-        
+
         expect(msgr.invokeResponsePromise).toHaveBeenCalledWith(message, null);
     });
 });

@@ -9,8 +9,23 @@ var Messager = /** @class */ (function () {
         this.payloadStructures = new Map();
         this.requestCallbacks = new Map();
         this.responsePromises = new Map();
-        this.receiveMessage = function (message) {
-            _this.validateReceivedMessage(message);
+        this.receiveMessage = function (messageEvent) {
+            var messageEventError = _this.validateMessageEvent(messageEvent);
+            if (messageEventError) {
+                _this.logAndThrowError(messageEventError);
+            }
+            var originValidationMessage = _this.validateMessageEventOrigin(messageEvent);
+            if (originValidationMessage) {
+                _this.logVerbose(originValidationMessage);
+                return;
+            }
+            var data;
+            try {
+                data = JSON.parse(messageEvent.data);
+            }
+            catch (error) {
+                _this.logAndThrowError(error);
+            }
             var messageStructure = {
                 verb: 'string',
                 id: 'string',
@@ -19,21 +34,19 @@ var Messager = /** @class */ (function () {
                 source: 'string',
                 payload: {}
             };
-            if (!_this.validReceivedOrigin(message) ||
-                (_this.validateMessage(message.data, messageStructure)).length > 0) {
+            if ((_this.validateMessage(data, messageStructure)).length > 0) {
                 return;
             }
-            var data = message.data;
             var key = _this.createMessageKey(data.verb, data.type);
             var payloadErrors = _this.validateMessage(data.payload, _this.payloadStructures.get(key));
             if (payloadErrors.length > 0) {
-                _this.sendMessage(message.verb, _this.createErrorObject('Invalid Payload Received', payloadErrors, message.data));
+                _this.sendMessage(data.verb, _this.createErrorObject('Invalid Payload Received', payloadErrors, messageEvent.data));
             }
             if (data.type === MessageType.Request && payloadErrors.length === 0) {
-                _this.invokeRequestCallback(message);
+                _this.invokeRequestCallback(messageEvent);
             }
             else if (data.type = MessageType.Response) {
-                _this.invokeResponsePromise(message, payloadErrors.length > 0 ? payloadErrors : null);
+                _this.invokeResponsePromise(messageEvent, payloadErrors.length > 0 ? payloadErrors : null);
             }
         };
         this.sendMessage = function (verb, payload, error) {
@@ -86,6 +99,18 @@ var Messager = /** @class */ (function () {
                 _this.logError(errors);
             }
             return errors;
+        };
+        this.validateMessageEvent = function (messageEvent) {
+            if (!messageEvent) {
+                return 'Invalid MessageEvent. The MessageEvent is falsy.';
+            }
+            else if (!messageEvent.origin) {
+                return 'Invalid MessageEvent. The MessageEvent has no origin.';
+            }
+            else if (!messageEvent.data) {
+                return 'Invalid MessageEvent. The MessageEvent has no data.';
+            }
+            return '';
         };
         this.createGuid = function () {
             var s4 = function () { return Math.floor((1 + Math.random()) * 0x10000)
@@ -180,25 +205,12 @@ var Messager = /** @class */ (function () {
         this.postMessage = function (message) {
             _this.targetWindow.postMessage(JSON.stringify(message), _this.targetOrigin);
         };
-        this.validateReceivedMessage = function (message) {
-            if (!message) {
-                _this.logAndThrowError('Invalid message received');
-            }
-            else if (!message.origin) {
-                _this.logAndThrowError('Invalid message received. The message has no origin.');
-            }
-            else if (!message.data) {
-                _this.logAndThrowError('Invalid message received. The message has no data.');
-            }
-        };
-        this.validReceivedOrigin = function (message) {
-            if (message.origin !== _this.targetOrigin) {
-                var text = "The message with origin: " + message.origin +
+        this.validateMessageEventOrigin = function (messageEvent) {
+            if (messageEvent.origin !== _this.targetOrigin) {
+                return "The message with origin: " + messageEvent.origin +
                     ("is not for this target origin: " + _this.targetOrigin);
-                _this.logVerbose(text, message);
-                return false;
             }
-            return true;
+            return '';
         };
         this.targetWindow = options.targetWindow;
         this.targetOrigin = options.targetOrigin;
