@@ -11,17 +11,31 @@
 </head>
 
 <body>
-    <header class="header bg-dark text-white p-2">Messager Test Harness</header>
     <div class="container-fluid">
+        <div class="row justify-content-end bg-dark text-white p-2">
+            <div class="col">
+                <header>Messager Test Harness</header>
+            </div>
+            <div class="col">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="inlineCheckbox1" value="option1">
+                    <label class="form-check-label" for="inlineCheckbox1">Auto Hide Forms</label>
+                </div>
+                <div class="form-check form-check-inline ">
+                    <input class="form-check-input" type="checkbox" id="inlineCheckbox2" value="option2">
+                    <label class="form-check-label" for="inlineCheckbox2">Show Messages</label>
+                </div>
+            </div>
+        </div>
         <div class="row">
             <div class="col bg-light p-2">
                 <form>
                     <div class="form-group">
                         <label for="exampleInputEmail1">Email address</label>
                         <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email">
-                    </div>                  
+                    </div>
                     <button type="submit" class="btn btn-primary">Submit</button>
-                    <button id= "showIframe" type="button" class="btn btn-primary">Show Iframe</button>
+                    <button id="showIframe" type="button" class="btn btn-primary">Show Iframe</button>
                 </form>
             </div>
             <div id="Iframe" class="col visible">
