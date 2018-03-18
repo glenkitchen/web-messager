@@ -3,11 +3,7 @@ enum MessageType {
     Response = 'RESPONSE'
 }
 
-interface MessageKey {
-    verb: string,
-    type: MessageType
-}
-
+//TODO
 interface MessageError {
     errorDescription: string,
     errors: string[],
@@ -15,106 +11,109 @@ interface MessageError {
 }
 
 interface MessageStructure {
-    verb: string,
     id: string,
-    date: string,
-    type: ['REQUEST', 'RESPONSE'],
-    source: string,
-    payload: {},
+    verb: string,
+    type: MessageType,
+    origin: string,
+    body: {},
     error?: MessageError
 }
 
 interface MessagerOptions {
     targetWindow: Window,
     targetOrigin: string,
-    messageSource: string,
-    mustLogError?: boolean,
-    mustLogVerbose?: boolean,
-    payloadStructures?: object,
-    requestCallbacks?: object
+    messageOrigin: string,
+    bodyStructures?: object,
+    receivedCallbacks?: object
 }
 
 class Messager {
-    private targetWindow: Window;
-    private targetOrigin: string;
-    private messageSource: string;
-    private mustLogError: boolean;
-    private mustLogVerbose: boolean;
-    private payloadStructures = new Map();
-    private requestCallbacks = new Map();
-    private responsePromises = new Map();
+    private responsePromises: object;
 
-    constructor(options: MessagerOptions) {
+    constructor(private options: MessagerOptions) {
+        const error = this.validateMessageOptions(options);
+        this.logAndThrowError(error);
 
-        this.targetWindow = options.targetWindow;
-        this.targetOrigin = options.targetOrigin;
-        this.messageSource = options.messageSource;
-        this.mustLogError = options.mustLogError === false ? false : true;
-        this.mustLogVerbose = options.mustLogVerbose === false ? false : true;
-
-        if (options.payloadStructures) {
-            for (const key of Object.keys(options.payloadStructures)) {
-                this.payloadStructures.set(key, options.payloadStructures[key]);
-            }
-        }
-
-        if (options.requestCallbacks) {
-            for (const key of Object.keys(options.requestCallbacks)) {
-                this.requestCallbacks.set(key, options.requestCallbacks[key]);
-            }
-        }
+        options.targetWindow = options.targetWindow || window.parent;
+        options.targetOrigin = options.targetOrigin || '*';
+        options.messageOrigin = options.messageOrigin || 'default-origin'
+        options.bodyStructures = options.bodyStructures || {};
+        options.receivedCallbacks = options.receivedCallbacks || {};
 
         window.addEventListener('message', this.receiveMessage);
     }
 
-    receiveMessage = (messageEvent: MessageEvent): void => {
+    /**
+     * Main Public Api 
+     */
+
+    createMessage(verb: string, id: string = null, type: MessageType = null,
+        body: object = null, error: MessageError = null)
+        : MessageStructure {
+
+        const message: any = {
+            id: id || this.createGuid(),
+            verb: verb,           
+            type: type || MessageType.Request,
+            source: this.options.messageOrigin,
+            body: body || {}
+        }
+        if (error) {
+            message.error = error;
+        }
+        return message;
+    }
+
+    createErrorMessage() {
+    }
+
+    createRequestMessage() {
+    }
+
+    createResponseMessage() {
+    }
+
+    receiveMessage(messageEvent: MessageEvent): void {
         const messageEventError = this.validateMessageEvent(messageEvent);
         if (messageEventError) {
             this.logAndThrowError(messageEventError);
         }
 
-        const originValidationMessage = this.validateMessageEventOrigin(messageEvent);
-        if (originValidationMessage) {
-            this.logVerbose(originValidationMessage)
-            return;
-        }
-
         let data;
         try {
-            data = JSON.parse(messageEvent.data);    
+            data = JSON.parse(messageEvent.data);
         } catch (error) {
-           this.logAndThrowError(error); 
+            this.logAndThrowError(error);
         }
-        
+
         const messageStructure = {
-            verb: 'string',
             id: 'string',
-            date: 'string',
+            verb: 'string',            
             type: ['REQUEST', 'RESPONSE'],
-            source: 'string',
-            payload: {}
+            origin: 'string',
+            bodt: {}
         };
         if ((this.validateMessage(data, messageStructure)).length > 0) {
             return;
         }
-                
+
         const key = this.createMessageKey(data.verb, data.type);
 
-        const payloadErrors = this.validateMessage(data.payload, this.payloadStructures.get(key));
-        if (payloadErrors.length > 0) {
+        const bodyErrors = null; // this.validateMessage(data.body, this.options.bodyStructures[key]);
+        if (bodyErrors.length > 0) {
             this.sendMessage(data.verb, this.createErrorObject(
-                'Invalid Payload Received', payloadErrors, messageEvent.data, ));
+                'Invalid Body Received', bodyErrors, messageEvent.data, ));
         }
 
-        if (data.type === MessageType.Request && payloadErrors.length === 0) {
-            this.invokeRequestCallback(messageEvent);
+        if (data.type === MessageType.Request && bodyErrors.length === 0) {
+            this.invokeReceivedCallback(messageEvent);
         }
         else if (data.type = MessageType.Response) {
-            this.invokeResponsePromise(messageEvent, payloadErrors.length > 0 ? payloadErrors : null);
+            this.invokeResponsePromise(messageEvent, bodyErrors.length > 0 ? bodyErrors : null);
         }
     }
 
-    sendMessage = (verb: string, payload: object = null, error: MessageError = null): PromiseLike<{}> => {
+    sendMessage(verb: string, body: object = null, error: MessageError = null): PromiseLike<{}> {
         if (!verb) {
             this.logAndThrowError('Invalid verb parameter in sendMessage');
         }
@@ -122,12 +121,12 @@ class Messager {
         const id = this.createGuid();
 
         return new Promise((resolve, reject) => {
-            this.responsePromises.set(id, this.createPromiseFunction(resolve, reject));
-            this.postMessage(this.createMessage(verb, id, MessageType.Request, payload, error));
+            //TODO this.responsePromises.set(id, this.createPromiseFunction(resolve, reject));
+            this.postMessage(this.createMessage(verb, id, MessageType.Request, body, error));
         });
     }
 
-    validateMessage = (data: object, structure: object): string[] => {
+    validateMessage (data: object, structure: object): string[] {
         if (!structure) {
             return [];
         }
@@ -168,31 +167,30 @@ class Messager {
         return errors;
     }
 
-    validateMessageEvent = (messageEvent: MessageEvent): string => {
-        if (!messageEvent) {
-            return 'Invalid MessageEvent. The MessageEvent is falsy.';
-        }
-        else if (!messageEvent.origin) {
-            return 'Invalid MessageEvent. The MessageEvent has no origin.';
-        }
-        else if (!messageEvent.data) {
-            return 'Invalid MessageEvent. The MessageEvent has no data.';
-        }
-        return '';
+    /* 
+    ** Public Methods    
+    */
+
+    getOptions(): MessagerOptions {
+        return this.options;
     }
 
-    private createGuid = (): string => {
-
-        const s4 = () => Math.floor((1 + Math.random()) * 0x10000)
-            .toString(16)
-            .substring(1);
-
-        return s4() + s4() + "-" + s4() + "-" + s4() + "-"
-            + s4() + "-" + s4() + s4() + s4();
+    addBodyStructure(verb: string, type: MessageType, structure: object) : void {
+        const key = this.createMessageKey(verb, type);
+        this.options.bodyStructures[key]= structure;
     }
 
-    private createErrorObject = (description: string, errors: string[], originalMessage: MessageStructure)
-        : MessageError => {
+    addReceivedCallBack(verb: string, type: MessageType, receivedCallback: Function) : void {
+        const key = this.createMessageKey(verb, type);
+        this.options.receivedCallbacks[key]= receivedCallback;
+    }
+
+    /**
+      * Private methods
+    */
+
+    private createErrorObject(description: string, errors: string[], originalMessage: MessageStructure)
+        : MessageError {
         return {
             errorDescription: description,
             errors: errors,
@@ -200,29 +198,8 @@ class Messager {
         };
     }
 
-    private createMessage = (verb: string, id: string = null, type: MessageType = null,
-        payload: object = null, error: MessageError = null)
-        : MessageStructure => {
-
-        const message: any = {
-            verb: verb,
-            id: id || this.createGuid(),
-            date: new Date().toLocaleString(),
-            type: type || MessageType.Request,
-            source: this.messageSource,
-            payload: payload || {}
-        }
-        if (error) {
-            message.error = error;
-        }
-        return message;
-    }
-
-    private createMessageKey = (verb: string, type: MessageType): MessageKey => {
-        return {
-            verb,
-            type
-        }
+    private createMessageKey(verb: string, type: MessageType): string {
+        return verb + type;
     }
 
     private createPromiseFunction(resolve: (data?) => void, reject: (error?) => void) {
@@ -234,7 +211,90 @@ class Messager {
         };
     }
 
-    private getType = (val): string => {
+    private invokeReceivedCallback(message) {
+        const callback = null;// TODO= this.options.receivedCallbacks(message.verb);
+
+        if (callback) {
+            try {
+                callback(message.data.body);
+            } catch (error) {
+                this.logError(error);
+                this.sendMessage(message.verb,
+                    this.createErrorObject('Error Invoking Request Callback', error, message));
+            }
+        }
+    }
+
+    private invokeResponsePromise(message, errors) {
+        const data = message.data;
+        const fn = this.responsePromises[data.id];
+
+        if (fn) {
+            try {
+                fn(data.body, errors);
+            } catch (error) {
+                this.logError(error);
+                this.sendMessage(message.verb,
+                    this.createErrorObject('Error Invoking Response Promise', error, message));
+            }
+        }
+    }
+
+    private logError(errorMessage: string | string[]): void {
+        console.error('Messager', errorMessage);
+    }
+
+    private logAndThrowError(errorMessage: string): void {
+        this.logError(errorMessage);
+        throw new Error(errorMessage);
+    }
+
+    private postMessage(message: MessageStructure): void {
+        this.options.targetWindow.postMessage(JSON.stringify(message), this.options.targetOrigin);
+    }
+
+    private validateMessageEvent(messageEvent: MessageEvent): string {
+        if (!messageEvent) {
+            return 'MessageEvent must have a value.';
+        }
+        else if (!messageEvent.origin) {
+            return 'MessageEvent must have an origin.';
+        }
+        else if (!messageEvent.data) {
+            return 'MessageEvent must have data.';
+        }
+        else if (messageEvent.origin !== this.options.targetOrigin) {
+            return `The message with origin: ${messageEvent.origin}` +
+                `is not for this target origin: ${this.options.targetOrigin}`
+        }
+        return '';
+    }
+
+    private validateMessageOptions(options: MessagerOptions): string {
+        if (!options) {
+            return 'MesssageOptions must have a value.';
+        }
+        else if (this.getType(options.bodyStructures) !== 'object') {
+            return 'MesssageOptions bodyStructures must be an object.';
+        }
+        else if (this.getType(options.receivedCallbacks) !== 'object') {
+            return 'MesssageOptions receivedCallbacks must be an object.';
+        }
+    }
+
+    /**
+     * Utlity methods  
+     */
+
+    private createGuid(): string {
+        const s4 = () => Math.floor((1 + Math.random()) * 0x10000)
+            .toString(16) // To Hexadecimal 
+            .substring(1);
+
+        return s4() + s4() + "-" + s4() + "-" + s4() + "-" + s4() + "-" + s4() + s4() + s4();
+    }
+
+    private getType(val): string {
         if (Array.isArray(val)) {
             return 'array'
         }
@@ -244,64 +304,4 @@ class Messager {
         return typeof val;
     }
 
-    private invokeRequestCallback = (message) => {
-        const callback = this.requestCallbacks.get(message.verb);
-
-        if (callback) {
-            try {
-                callback(message.data.payload);
-            } catch (error) {
-                this.logError(error);
-                this.sendMessage(message.verb,
-                    this.createErrorObject('Error Invoking Request Callback', error, message));
-            }
-        }
-    }
-
-    private invokeResponsePromise = (message, errors) => {
-        const data = message.data;
-        const fn = this.responsePromises.get(data.id);
-
-        if (fn) {
-            try {
-                fn(data.payload, errors);
-            } catch (error) {
-                this.logError(error);
-                this.sendMessage(message.verb,
-                    this.createErrorObject('Error Invoking Response Promise', error, message));
-            }
-        }
-        else {
-            this.logVerbose(`No Promise for a RESPONSE message with id ${data.id}`, data);
-        }
-    }
-
-    private logError = (message: string | string[]): void => {
-        if (this.mustLogError) {
-            console.error('Messager', message);
-        }
-    }
-
-    private logAndThrowError = (message: string): void => {
-        this.logError(message);
-        throw new Error(message);
-    }
-
-    private logVerbose = (message: string, detail = null): void => {
-        if (this.mustLogVerbose) {
-            console.info('Messager', message, detail)
-        }
-    }
-
-    private postMessage = (message: MessageStructure): void => {
-        this.targetWindow.postMessage(JSON.stringify(message), this.targetOrigin);
-    }
-
-    private validateMessageEventOrigin = (messageEvent: MessageEvent): string => {
-        if (messageEvent.origin !== this.targetOrigin) {
-            return `The message with origin: ${messageEvent.origin}` +
-                `is not for this target origin: ${this.targetOrigin}`
-        }
-        return '';
-    }
 }
