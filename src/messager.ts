@@ -3,7 +3,6 @@ enum MessageType {
     Response = 'RESPONSE'
 }
 
-//TODO
 interface MessageError {
     errorDescription: string,
     errors: string[],
@@ -246,7 +245,7 @@ class Messager {
 
     private logAndThrowError(errorMessage: string): void {
         this.logError(errorMessage);
-        throw new Error(errorMessage);
+        throw new Error('Messager' + errorMessage);
     }
 
     private postMessage(message: MessageStructure): void {
@@ -264,8 +263,7 @@ class Messager {
             return 'MessageEvent must have data.';
         }
         else if (messageEvent.origin !== this.options.targetOrigin) {
-            return `The message with origin: ${messageEvent.origin}` +
-                `is not for this target origin: ${this.options.targetOrigin}`
+            return `This message: ${messageEvent} is not for this target origin: ${this.options.targetOrigin}`
         }
         return '';
     }
@@ -288,7 +286,7 @@ class Messager {
 
     private createGuid(): string {
         const s4 = () => Math.floor((1 + Math.random()) * 0x10000)
-            .toString(16) // To Hexadecimal 
+            .toString(16)  
             .substring(1);
 
         return s4() + s4() + "-" + s4() + "-" + s4() + "-" + s4() + "-" + s4() + s4() + s4();

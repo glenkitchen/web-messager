@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Messager Test Harness</title>
+    <link rel="stylesheet" href="./bootstrap-4.0.0-dist/css/bootstrap.css">
+    <link rel="stylesheet" href="./harness.css">
+</head>
+
+<body>
+    <header class="header bg-dark text-white p-2">Messager Test Harness</header>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col bg-light p-2">
+                <form>
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Email address</label>
+                        <input type="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp" placeholder="Enter email">
+                    </div>                  
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button id= "showIframe" type="button" class="btn btn-primary">Show Iframe</button>
+                </form>
+            </div>
+            <div id="Iframe" class="col visible">
+                <div class="row">
+                    <div class="col-xs-1 col-sm-2">
+                        One column
+                    </div>
+                    <div class="col">
+                        One column
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="./harness.js"></script>
+</body>
+
+</html>
