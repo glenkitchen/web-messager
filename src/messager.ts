@@ -195,7 +195,7 @@ class Messager {
             try {
                 callback(message.body);
             } catch (err) {
-                this.sendErrorMessage('Error Invoking Request Callback', err, message);
+                this.sendErrorMessage('Error Invoking Received Callback', err, message);
                 throw new Error(err);
             }
         }
