@@ -112,8 +112,8 @@ class Messager {
 
     sendMessage(message: Message): PromiseLike<{}> {
         const id = this.createGuid();
-        return new Promise((resolve, reject) => {
-            this.responsePromises[id] = this.createPromiseFunction(resolve, reject);
+        return new Promise((resolver, rejecter) => {
+            this.responsePromises[id] = this.createPromiseFunction(resolver, rejecter);
             this.postMessage(message);
         });
     }
