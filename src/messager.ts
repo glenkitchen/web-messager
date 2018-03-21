@@ -32,7 +32,7 @@ class Messager {
     constructor(private options: MessagerOptions) {
         const error = this.validateMessagerOptions(options);
         if (error) {
-            throw new Error(error);
+            throw error;
         }
 
         options.targetWindow = options.targetWindow || window.parent;
@@ -48,7 +48,8 @@ class Messager {
      * Main Public Api 
      */
 
-    createMessage(verb: string, id?: string, body?: object, type?: MessageType, error?: object): Message {
+    createMessage(verb: string, id?: string, body?: object, type?: MessageType, error?: object)
+        : Message {
         const message: Message = {
             id: id || this.createGuid(),
             verb: verb,
@@ -79,7 +80,7 @@ class Messager {
     receiveMessage(messageEvent: MessageEvent): void {
         const messageEventError = this.validateMessageEvent(messageEvent);
         if (messageEventError) {
-            throw new Error(messageEventError);
+            throw messageEventError;
         }
 
         let data = JSON.parse(messageEvent.data);
@@ -93,7 +94,7 @@ class Messager {
         };
         const messageStructureErrors = this.validateStructure(data, messageStructure);
         if (messageStructureErrors.length > 0) {
-            throw new Error(messageStructureErrors.join());
+            throw messageStructureErrors.join();
         }
 
         const key = this.buildKey(data.verb, data.type);
@@ -112,14 +113,14 @@ class Messager {
 
     sendMessage(message: Message): PromiseLike<{}> {
         const id = this.createGuid();
-        return new Promise((resolver, rejecter) => {
-            this.responsePromises[id] = this.createPromiseFunction(resolver, rejecter);
+        return new Promise((resolve, reject) => {
+            this.responsePromises[id] = this.createPromiseFunction(resolve, reject);
             this.postMessage(message);
         });
     }
 
     validateStructure(data: object, structure: object): string[] {
-        if (!structure) {
+        if (this.getType(structure) !== 'object') {
             return [];
         }
         let errors = [];
@@ -179,37 +180,38 @@ class Messager {
         return verb + type;
     }
 
-    private createPromiseFunction(resolver: (data?) => void, rejecter: (error?) => void): Function {
+    private createPromiseFunction(resolve: (data?) => void, reject: (error?) => void): Function {
         return (data, error) => {
             if (error) {
-                rejecter(error);
+                reject(error);
             }
-            resolver(data);
+            resolve(data);
         };
+    }
+
+    private invoker(invokee: Function, message: Message): Function {
+        return function () {
+            try {
+                invokee();
+            } catch (err) {
+                this.sendErrorMessage('Error Invoking Function', err, message);
+                throw err;
+            }
+        }
     }
 
     private invokeReceivedCallback(message: Message) {
         const key = this.buildKey(message.verb, message.type);
         const callback = this.options.receivedCallbacks[key];
         if (callback) {
-            try {
-                callback(message.body);
-            } catch (err) {
-                this.sendErrorMessage('Error Invoking Received Callback', err, message);
-                throw new Error(err);
-            }
+            this.invoker(callback(message.body), message)();
         }
     }
 
     private invokeResponsePromiseFunction(message: Message, error?: string) {
         const f = this.responsePromises[message.id];
         if (f) {
-            try {
-                f(message.body, error);
-            } catch (err) {
-                this.sendErrorMessage('Error Invoking Response Promise', err, message);
-                throw new Error(err);
-            }
+            this.invoker(f(message.body, error), message)();
         }
     }
 
