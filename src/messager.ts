@@ -103,6 +103,7 @@ class Messager {
             this.sendErrorMessage('Invalid Message Body Received', messageBodyErrors.join(), data);
         }
 
+        //TODO order?
         if (data.type === MessageType.Request && messageBodyErrors.length === 0) {
             this.invokeReceivedCallback(data);
         }
@@ -112,9 +113,8 @@ class Messager {
     }
 
     sendMessage(message: Message): PromiseLike<{}> {
-        const id = this.createGuid();
         return new Promise((resolve, reject) => {
-            this.responsePromises[id] = this.createPromiseFunction(resolve, reject);
+            this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
             this.postMessage(message);
         });
     }
