@@ -11,10 +11,10 @@ interface MessageError {
 
 interface Message {
     id: string,
-    verb: string,
     type: MessageType,
-    origin: string,
+    verb: string,    
     body: {},
+    origin: string,    
     error?: MessageError | {}
 }
 
@@ -104,12 +104,12 @@ class Messager {
         }
 
         //TODO order?
-        if (data.type === MessageType.Request && messageBodyErrors.length === 0) {
-            this.invokeReceivedCallback(data);
-        }
-        else if (data.type = MessageType.Response) {
+        if (data.type = MessageType.Response) {
             this.invokeResponsePromiseFunction(data, messageBodyErrors.length > 0 ? messageBodyErrors.join() : undefined);
         }
+        if (messageBodyErrors.length === 0) {
+            this.invokeReceivedCallback(data);
+        };
     }
 
     sendMessage(message: Message): PromiseLike<{}> {
@@ -154,14 +154,14 @@ class Messager {
         return this.options;
     }
 
-    addBodyStructure(verb: string, type: MessageType, bodyStructure: object): void {
-        const key = this.buildKey(verb, type);
-        this.options.bodyStructures[key] = bodyStructure;
+    addBodyStructure(type: MessageType, verb: string, structure: object): void {
+        const key = this.buildKey(type, verb);
+        this.options.bodyStructures[key] = structure;
     }
 
-    addReceivedCallBack(verb: string, type: MessageType, receivedCallback: Function): void {
-        const key = this.buildKey(verb, type);
-        this.options.receivedCallbacks[key] = receivedCallback;
+    addReceivedCallBack(type: MessageType, verb: string, callback: Function): void {
+        const key = this.buildKey(type, verb);
+        this.options.receivedCallbacks[key] = callback;
     }
 
     /**
@@ -176,8 +176,8 @@ class Messager {
         };
     }
 
-    private buildKey(verb: string, type: MessageType): string {
-        return verb + type;
+    private buildKey(type: MessageType, verb: string): string {
+        return `${type}.${verb}`;
     }
 
     private createPromiseFunction(resolve: (data?) => void, reject: (error?) => void): Function {
@@ -201,7 +201,7 @@ class Messager {
     }
 
     private invokeReceivedCallback(message: Message) {
-        const key = this.buildKey(message.verb, message.type);
+        const key = this.buildKey(message.type, message.verb);
         const callback = this.options.receivedCallbacks[key];
         if (callback) {
             this.invoker(callback(message.body), message)();
@@ -244,12 +244,6 @@ class Messager {
     private validateMessagerOptions(options: MessagerOptions): string {
         if (!options) {
             return 'MesssageOptions must have a value.';
-        }
-        else if (this.getType(options.bodyStructures) !== 'object') {
-            return 'MesssageOptions bodyStructures must be an object.';
-        }
-        else if (this.getType(options.receivedCallbacks) !== 'object') {
-            return 'MesssageOptions receivedCallbacks must be an object.';
         }
     }
 

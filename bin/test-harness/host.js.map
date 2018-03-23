@@ -1,0 +1,1 @@
+{"version":3,"file":"host.js","sourceRoot":"","sources":["../../test-harness/host.ts"],"names":[],"mappings":"AAAA;IAGI;QACI,IAAI,CAAC,kBAAkB,EAAE,CAAC;IAC9B,CAAC;IAEO,iCAAkB,GAA1B;QACI,IAAM,QAAQ,GAAG,IAAI,QAAQ,CAAC;YAC1B,YAAY,EAAE,MAAM;YACpB,YAAY,EAAE,GAAG;YACjB,aAAa,EAAE,EAAE;SACpB,CAAC,CAAC;IACP,CAAC;IACL,WAAC;AAAD,CAAC,AAdD,IAcC"}

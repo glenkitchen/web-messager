@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Messager Test Harness</title>
+    <link rel="stylesheet" href="./bootstrap-4.0.0-dist/css/bootstrap.css">
+    <link rel="stylesheet" href="./host.css">
+</head>
+
+<body>
+    <nav class="navbar bg-dark text-white">
+        <span>
+            Messager Test Harness
+        </span>
+        <div class="justify-contene-end">
+            <div class="form-check-inline">
+                <input id="autoHideForms" class="form-check-input" type="checkbox">
+                <label for="autoHideForms" class="form-check-label">Auto Hide Forms</label>
+            </div>
+            <div class="form-check-inline ">
+                <input id="showMessages" class="form-check-input" type="checkbox">
+                <label for="showMessages" class="form-check-label">Show Messages</label>
+            </div>
+        </div>
+    </nav>
+    <div class="container-fluid">
+        <div id="mainRow" class="row">
+            <div class="col-3">
+                <div class="row bg-secondary text-white p-2">
+                    <header>Iframe Form</header>
+                </div>
+                <div id="iframeForm" class="row bg-light p-2">
+                    <form>
+                        <div class="form-group">
+                            <label for="Rectangles">Rectangles</label>
+                            <input id="Rectangles" type="number" class="form-control" placeholder="No of rectangles" value="3" >
+                        </div>                        
+                        <button type="submit" class="btn btn-primary">Load Iframe</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col">
+                <div class="row bg-secondary text-white p-2">
+                    <header>Iframe</header>
+                </div>
+                <iframe id="hostedIframe" src="" frameborder="0"></iframe>
+            </div>
+            <div class="col-3">
+                <div class="row bg-secondary text-white p-2">
+                    <header>Messages</header>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- <script src="./bootstrap-4.0.0-dist/js/bootstrap.js"></script> -->
+    <script src="../bin/src/messager.js"></script>
+    <script src="../bin/test-harness/host.js"></script>
+    <script>
+        const host = new Host();
+    </script>
+</body>
+
+</html>
