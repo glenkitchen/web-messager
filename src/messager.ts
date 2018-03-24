@@ -27,7 +27,7 @@ interface MessagerOptions {
 }
 
 class Messager {
-    private responsePromises: object;
+    private responsePromises: object = {};
 
     constructor(private options: MessagerOptions) {
         const error = this.validateMessagerOptions(options);
@@ -41,7 +41,7 @@ class Messager {
         options.bodyStructures = options.bodyStructures || {};
         options.receivedCallbacks = options.receivedCallbacks || {};
 
-        window.addEventListener('message', this.receiveMessage);
+        window.addEventListener('message', (event) => this.receiveMessage);
     }
 
     /**
@@ -77,7 +77,7 @@ class Messager {
         return this.createMessage(verb, id, body, MessageType.Response);
     }
 
-    receiveMessage(messageEvent: MessageEvent): void {
+    receiveMessage(messageEvent: MessageEvent): void {        
         const messageEventError = this.validateMessageEvent(messageEvent);
         if (messageEventError) {
             throw messageEventError;
@@ -112,11 +112,11 @@ class Messager {
         };
     }
 
-    sendMessage(message: Message): PromiseLike<{}> {
-        return new Promise((resolve, reject) => {
-            this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
+    sendMessage(message: Message): void {// PromiseLike<{}> {
+        //return new Promise((resolve, reject) => {
+        //    this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
             this.postMessage(message);
-        });
+        //});
     }
 
     validateStructure(data: object, structure: object): string[] {
@@ -216,7 +216,8 @@ class Messager {
     }
 
     private postMessage(message: Message): void {
-        this.options.targetWindow.postMessage(JSON.stringify(message), this.options.targetOrigin);
+        //this.options.targetWindow.postMessage(JSON.stringify(message), this.options.targetOrigin);
+        window.parent.postMessage(JSON.stringify(message), this.options.targetOrigin);
     }
 
     private sendErrorMessage(description: string, detail: string, originalMessage: Message) {
@@ -248,7 +249,7 @@ class Messager {
     }
 
     /**
-     * Utlity methods  
+     * Private Utlity methods  
      */
 
     private createGuid(): string {

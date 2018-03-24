@@ -9,19 +9,8 @@ Overview
 
 /**
  * TODO
- * 
- * Object.assign({}, defaultOptions, options); 
- * 
- * destroy
- * 
- * unit test
- *    receiveMessage with payload errors sends error message        
- *  interacive test
- *    example library
- * 
- *  documentation
- *  type definitions 
- *  npm package
+ * shorted names without redundancy?
+ * send method 
  */
 
 /**

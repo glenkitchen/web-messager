@@ -5,8 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Document</title>
+    <link rel="stylesheet" href="./bootstrap-4.0.0-dist/css/bootstrap.css">
 </head>
 <body>
-    
+    <div id="hosted" class="m-3 p-3 border border-danger font-weight-bold">
+        I am hosted in an Iframe
+    </div>
+    <script src="../bin/src/messager.js"></script>
+    <script src="../bin/test-harness/common.js"></script>
+    <script src="../bin/test-harness/hosted.js"></script>
+    <script>
+        const hosted = new Hosted();
+    </script>
 </body>
 </html>

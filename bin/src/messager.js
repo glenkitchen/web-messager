@@ -6,7 +6,9 @@ var MessageType;
 ;
 var Messager = /** @class */ (function () {
     function Messager(options) {
+        var _this = this;
         this.options = options;
+        this.responsePromises = {};
         var error = this.validateMessagerOptions(options);
         if (error) {
             throw error;
@@ -16,7 +18,7 @@ var Messager = /** @class */ (function () {
         options.messageOrigin = options.messageOrigin || 'default-origin';
         options.bodyStructures = options.bodyStructures || {};
         options.receivedCallbacks = options.receivedCallbacks || {};
-        window.addEventListener('message', this.receiveMessage);
+        window.addEventListener('message', function (event) { return _this.receiveMessage; });
     }
     /**
      * Main Public Api
@@ -77,11 +79,10 @@ var Messager = /** @class */ (function () {
         ;
     };
     Messager.prototype.sendMessage = function (message) {
-        var _this = this;
-        return new Promise(function (resolve, reject) {
-            _this.responsePromises[message.id] = _this.createPromiseFunction(resolve, reject);
-            _this.postMessage(message);
-        });
+        //return new Promise((resolve, reject) => {
+        //    this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
+        this.postMessage(message);
+        //});
     };
     Messager.prototype.validateStructure = function (data, structure) {
         if (this.getType(structure) !== 'object') {
@@ -169,7 +170,8 @@ var Messager = /** @class */ (function () {
         }
     };
     Messager.prototype.postMessage = function (message) {
-        this.options.targetWindow.postMessage(JSON.stringify(message), this.options.targetOrigin);
+        //this.options.targetWindow.postMessage(JSON.stringify(message), this.options.targetOrigin);
+        window.parent.postMessage(JSON.stringify(message), this.options.targetOrigin);
     };
     Messager.prototype.sendErrorMessage = function (description, detail, originalMessage) {
         this.sendMessage(this.createErrorMessage(originalMessage.verb, this.createMessageError(description, detail, originalMessage)));
@@ -195,7 +197,7 @@ var Messager = /** @class */ (function () {
         }
     };
     /**
-     * Utlity methods
+     * Private Utlity methods
      */
     Messager.prototype.createGuid = function () {
         var s4 = function () { return Math.floor((1 + Math.random()) * 0x10000)
