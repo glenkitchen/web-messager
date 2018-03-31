@@ -4,75 +4,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Messager Test Harness</title>
-    <link rel="stylesheet" href="./bootstrap-4.0.0-dist/css/bootstrap.css">
-    <link rel="stylesheet" href="./host.css">
+    <meta http-equiv="Refresh" content="1">
+    <title>Messenger Test Harness</title>
+    <link rel="stylesheet" href="./cs/host.css">
 </head>
 
 <body>
-    <nav class="navbar bg-dark text-white">
-        <span>
-            Messager Test Harness
-        </span>
-        <div>
-            <div class="form-check-inline">
-                <input id="autoHideForms" class="form-check-input" type="checkbox">
-                <label for="autoHideForms" class="form-check-label">Auto Hide Forms</label>
+    <header id="mainHeader" class="mainHeader">
+        <div id="logo">Messenger Test Harness</div>
+        <div id="controls">
+            <div>
+                <input type="checkbox" id="showForms">
+                <label for="showForms">Always Show Forms</label>
             </div>
-            <div class="form-check-inline ">
-                <input id="showMessages" class="form-check-input" type="checkbox">
-                <label for="showMessages" class="form-check-label">Show Messages</label>
+            <div>
+                <input type="checkbox" id="showMessages">
+                <label for="showMessages">Show Messages</label>
             </div>
         </div>
-    </nav>
-    <div class="container-fluid">
-        <div id="mainRow" class="row">
-            <div class="col-3">
-                <div class="row bg-secondary text-white p-2">
-                    <header>Iframe Form</header>
-                </div>
-                <div id="iframeForm" class="row bg-light p-2">
-                    <form>
-                        <div class="form-group">
-                            <label for="rectangles">No of Rectangles</label>
-                            <input id="rectangles" type="number" class="form-control" placeholder="No of rectangles" value="3" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="iframeUrl">IFrame Url</label>
-                            <input id="iframeUrl" type="textarea" class="form-control" value="./hosted.html" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="iframeAction">Iframe Action</label>
-                            <select id="iframeAction" class="form-control" required>
-                                <option value="GET" selected>GET</option>
-                                <option value="POST">POST</option>
-                            </select>
-                        </div>
-                        <button id="loadIframe" type="button" class="btn btn-primary">Load Iframe</button>
-                    </form>
-                </div>
-            </div>
-            <div class="col">
-                <div class="row bg-secondary text-white p-2">
-                    <header>Iframe</header>
-                </div>
-                <iframe id="hostedIframe" frameborder="0"></iframe>
-            </div>
-            <div class="col-3">
-                <div class="row bg-secondary text-white p-2">
-                    <header>Messages</header>
-                </div>
-            </div>
+    </header>
+    <main id="mainContent">
+        <div id="formsContainer">
         </div>
-    </div>
-
-    <script src="../bin/src/messager.js"></script>
-    <script src="../bin/test-harness/common.js"></script>
-    <script src="../bin/test-harness/host.js"></script>
-    <script>
-        const host = new Host();
-    </script>
+        <div id="splitter1" class="splitter"></div>
+        <div id="iframeContainer">
+            <header class="subHeader">Iframe</header>
+            <iframe src="" frameborder="0"></iframe>
+        </div>
+        <div id="splitter2" class="splitter"></div>
+        <div id="messagesContainer">
+            <header class="subHeader">Messages</header>
+            <table>
+                <thead>
+                    <tr>
+                        <th>First</th>
+                        <th>Last</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                    </tr>
+                    <tr>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                    </tr>
+                    <tr>
+                        <td>Mark</td>
+                        <td>Otto</td>
+                    </tr>
+                    <tr>
+                        <td>Jacob</td>
+                        <td>Thornton</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <script src="./js/jquery-3.3.1.min.js"></script>
+    <!-- <script src="./js/splitter.js"></script> -->
 </body>
 
 </html>

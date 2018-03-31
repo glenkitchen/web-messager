@@ -1,0 +1,106 @@
+html, body {
+    height: 100%;    
+    margin: 0;
+    padding: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 95%;
+}
+
+body {    
+    display: flex;
+    flex-direction: column;
+}
+
+table {
+    width: 97%;        
+    margin-left: 2%;
+    border-collapse: collapse;
+} 
+
+th {
+    text-align: start;
+}
+
+th, td {
+    padding: 0.20em;
+}
+
+tbody > tr:nth-of-type(odd) {
+    background-color: rgba(0,0,0,.05); 
+}
+
+tbody > tr:nth-of-type(odd) > td {
+    border-top: 2px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6;
+}
+
+label, input[type=checkbox] {
+    vertical-align: middle;
+}
+
+.mainHeader {
+    padding: 0.75em;
+    background-color: black;
+    color: white;       
+}
+
+.subHeader {
+    padding: 0.50em;
+    background-color: grey;
+    color: white;
+}
+
+#mainHeader {     
+    display: flex;   
+}
+
+#logo {
+    flex: 7;
+} 
+
+#controls {
+    flex: 3;    
+    display: flex;
+}
+
+#controls > div:nth-child(2) {
+    padding-left: 30px; 
+}
+
+#mainContent {
+    flex: 1;
+    display: flex;
+} 
+
+#formsContainer {
+    width: 200px;
+}
+
+#iframeContainer {
+    flex: 3;
+    display: flex;
+    flex-direction: column;     
+}
+
+#iframeContainer > iframe {    
+    flex: auto;
+    margin: 0.25em;      
+}
+
+#messagesContainer {
+    flex: 1;
+}
+
+.splitter {    
+    width: 4px;
+    min-width: 4px;
+    border-left: 1px solid grey;
+    border-right: 1px solid grey;
+    cursor: col-resize;
+}
+
+/* @media screen and (max-width: 500px) {
+    #mainContent {
+        flex-direction: column;
+    }   
+} */

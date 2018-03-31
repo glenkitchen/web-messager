@@ -102,8 +102,7 @@ class Messager {
         if (messageBodyErrors.length > 0) {
             this.sendErrorMessage('Invalid Message Body Received', messageBodyErrors.join(), data);
         }
-
-        //TODO order?
+        
         if (data.type = MessageType.Response) {
             this.invokeResponsePromiseFunction(data, messageBodyErrors.length > 0 ? messageBodyErrors.join() : undefined);
         }
@@ -112,11 +111,11 @@ class Messager {
         };
     }
 
-    sendMessage(message: Message): void {// PromiseLike<{}> {
-        //return new Promise((resolve, reject) => {
-        //    this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
+    sendMessage(message: Message): PromiseLike<{}> {
+        return new Promise((resolve, reject) => {
+            this.responsePromises[message.id] = this.createPromiseFunction(resolve, reject);
             this.postMessage(message);
-        //});
+        });
     }
 
     validateStructure(data: object, structure: object): string[] {
