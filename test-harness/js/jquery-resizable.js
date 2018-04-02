@@ -67,8 +67,7 @@ Licensed under MIT License
                     return;
 
                 $handle = getHandle(opt.handleSelector, $el);
-                //$handle.off("mousedown." + opt.instanceId + " touchstart." + opt.instanceId);
-                $handle.off("mousedown." + opt.instanceId);
+                $handle.off("mousedown." + opt.instanceId + " touchstart." + opt.instanceId);
                 if (opt.touchActionNone)
                     $handle.css("touch-action", "");
                 $el.removeClass("resizable");
@@ -85,9 +84,8 @@ Licensed under MIT License
                 $handle.css("touch-action", "none");
 
             $el.addClass("resizable");
-            //$handle.on("mousedown." + opt.instanceId + " touchstart." + opt.instanceId, startDragging);
-            $handle.on("mousedown." + opt.instanceId, startDragging);
-
+            $handle.on("mousedown." + opt.instanceId + " touchstart." + opt.instanceId, startDragging);
+            
             function noop(e) {
                 e.stopPropagation();
                 e.preventDefault();
@@ -115,10 +113,10 @@ Licensed under MIT License
 
                 $(document).on('mousemove.' + opt.instanceId, doDrag);
                 $(document).on('mouseup.' + opt.instanceId, stopDragging);
-                // if (window.Touch || navigator.maxTouchPoints) {
-                //     $(document).on('touchmove.' + opt.instanceId, doDrag);
-                //     $(document).on('touchend.' + opt.instanceId, stopDragging);
-                // }
+                if (window.Touch || navigator.maxTouchPoints) {
+                     $(document).on('touchmove.' + opt.instanceId, doDrag);
+                     $(document).on('touchend.' + opt.instanceId, stopDragging);
+                }
                 $(document).on('selectstart.' + opt.instanceId, noop); // disable selection
             }
 
@@ -154,10 +152,10 @@ Licensed under MIT License
                 $(document).off('mousemove.' + opt.instanceId);
                 $(document).off('mouseup.' + opt.instanceId);
 
-                // if (window.Touch || navigator.maxTouchPoints) {
-                //     $(document).off('touchmove.' + opt.instanceId);
-                //     $(document).off('touchend.' + opt.instanceId);
-                // }
+                if (window.Touch || navigator.maxTouchPoints) {
+                     $(document).off('touchmove.' + opt.instanceId);
+                     $(document).off('touchend.' + opt.instanceId);
+                }
                 $(document).off('selectstart.' + opt.instanceId, noop);
 
                 // reset changed values

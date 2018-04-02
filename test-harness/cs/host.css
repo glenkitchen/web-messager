@@ -84,15 +84,15 @@ label, input[type=checkbox] {
 
 #iframeContainer {
     flex: 1 1 auto;        
-    /* display: flex;
-    flex-direction: column;   */
+    display: flex;
+    flex-direction: column;   
 }
 
 /* #iframeContainer > header {         
 } */
 
 #iframeContainer > iframe {        
-    /* flex: 1 1 auto;   */
+    flex: 1 1 auto;   
     margin: 0.25em;    
     width: 99%;      
 }
