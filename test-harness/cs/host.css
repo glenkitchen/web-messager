@@ -6,11 +6,6 @@ html, body {
     font-size: 95%;
 }
 
-body {    
-    display: flex;
-    flex-direction: column;
-}
-
 table {
     width: 97%;        
     margin-left: 2%;
@@ -38,7 +33,7 @@ label, input[type=checkbox] {
     vertical-align: middle;
 }
 
-.mainHeader {
+.headerContainer {
     padding: 0.75em;
     background-color: black;
     color: white;       
@@ -50,8 +45,23 @@ label, input[type=checkbox] {
     color: white;
 }
 
-#mainHeader {     
-    display: flex;   
+/***************************
+          Layout 
+ ***************************/
+ 
+ body {    
+    display: flex;
+    flex-direction: column;
+}
+
+#headerContainer {     
+    display: flex;  
+    flex-direction: row; 
+}
+
+#mainContent {
+    flex: 1 1 auto; 
+    display: flex;  
 }
 
 #logo {
@@ -60,31 +70,31 @@ label, input[type=checkbox] {
 
 #controls {
     flex: 3;    
-    display: flex;
+    display: flex; 
 }
 
 #controls > div:nth-child(2) {
     padding-left: 30px; 
 }
 
-#mainContent {
-    flex: 1;
-    display: flex;
-} 
-
-#formsContainer {
+#formsContainer {    
     width: 200px;
+    min-width: 100px;
 }
 
 #iframeContainer {
-    flex: 3;
-    display: flex;
-    flex-direction: column;     
+    flex: 1 1 auto;        
+    /* display: flex;
+    flex-direction: column;   */
 }
 
-#iframeContainer > iframe {    
-    flex: auto;
-    margin: 0.25em;      
+/* #iframeContainer > header {         
+} */
+
+#iframeContainer > iframe {        
+    /* flex: 1 1 auto;   */
+    margin: 0.25em;    
+    width: 99%;      
 }
 
 #messagesContainer {
@@ -92,7 +102,7 @@ label, input[type=checkbox] {
 }
 
 .splitter {    
-    width: 4px;
+    width: 8px;
     min-width: 4px;
     border-left: 1px solid grey;
     border-right: 1px solid grey;

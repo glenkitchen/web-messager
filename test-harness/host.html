@@ -4,13 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Refresh" content="1">
+    <meta http-equiv="Refres" content="1">
     <title>Messenger Test Harness</title>
     <link rel="stylesheet" href="./cs/host.css">
 </head>
 
 <body>
-    <header id="mainHeader" class="mainHeader">
+    <header id="headerContainer" class="headerContainer">
         <div id="logo">Messenger Test Harness</div>
         <div id="controls">
             <div>
@@ -29,9 +29,9 @@
         <div id="splitter1" class="splitter"></div>
         <div id="iframeContainer">
             <header class="subHeader">Iframe</header>
-            <iframe src="" frameborder="0"></iframe>
+            <iframe src="hosted.html" frameborder="0"></iframe>
         </div>
-        <div id="splitter2" class="splitter"></div>
+        <!-- <div id="splitter2" class="splitter"></div>
         <div id="messagesContainer">
             <header class="subHeader">Messages</header>
             <table>
@@ -60,10 +60,18 @@
                     </tr>
                 </tbody>
             </table>
-        </div>
+        </div> -->
     </main>
     <script src="./js/jquery-3.3.1.min.js"></script>
-    <!-- <script src="./js/splitter.js"></script> -->
+    <script src="./js/jquery-resizable.js"></script>
+    <script>        
+        $(document).ready(function () {            
+            $('#formsContainer').resizable({
+                handleSelector: '#splitter1',
+                resizeHeight: false                
+            });
+        });
+    </script>
 </body>
 
 </html>
