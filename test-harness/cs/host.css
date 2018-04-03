@@ -6,6 +6,26 @@ html, body {
     font-size: 95%;
 }
 
+body {    
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    display: inline-block; 
+    margin-bottom: 0.5rem;
+}
+
+button {
+    white-space: nowrap;      
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: 0.25rem;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;     
+    cursor: pointer;
+}
+
 table {
     width: 97%;        
     margin-left: 2%;
@@ -17,7 +37,7 @@ th {
 }
 
 th, td {
-    padding: 0.20em;
+    padding: 0.20rem;
 }
 
 tbody > tr:nth-of-type(odd) {
@@ -29,29 +49,50 @@ tbody > tr:nth-of-type(odd) > td {
     border-bottom: 2px solid #dee2e6;
 }
 
-label, input[type=checkbox] {
-    vertical-align: middle;
+.primary {
+    color: #fff;
+    background-color: #007bff;
+    border: 1px solid #007bff;      
+}
+
+.primary:hover {
+    background-color: #0069d9;
+    border-color: #0062cc; 
+}
+
+.form-group {
+    margin-bottom: 1rem;
+} 
+
+.form-control {
+    display: block; 
+    width: 80%;   
+    padding: 0.375rem 0.75rem; 
+    font-size: 0.95rem;  
+    color: #495057;     
+    border: 1px solid #ced4da; 
+    border-radius: 0.25rem;     
 }
 
 .headerContainer {
-    padding: 0.75em;
+    padding: 0.70rem;
     background-color: black;
     color: white;       
 }
 
 .subHeader {
-    padding: 0.50em;
+    padding: 0.50rem;
     background-color: grey;
     color: white;
 }
 
-/***************************
-          Layout 
- ***************************/
- 
- body {    
-    display: flex;
-    flex-direction: column;
+.splitter {    
+    width: 2px;
+    min-width: 2px;
+    background-color: grey; 
+    /* border-left: 1px solid grey;
+    border-right: 1px solid grey; */
+    /* cursor: col-resize; */
 }
 
 #headerContainer {     
@@ -60,7 +101,7 @@ label, input[type=checkbox] {
 }
 
 #mainContent {
-    flex: 1 1 auto; 
+    flex: 1; 
     display: flex;  
 }
 
@@ -73,40 +114,40 @@ label, input[type=checkbox] {
     display: flex; 
 }
 
+#controls > label, input[type=checkbox] {
+    vertical-align: middle; 
+}
+
 #controls > div:nth-child(2) {
-    padding-left: 30px; 
+    padding-left: 1rem; 
 }
 
 #formsContainer {    
-    width: 200px;
-    min-width: 100px;
+   flex: 1; 
+   display: flex;
+   flex-direction: column; 
+}
+
+#formsContainer > form {    
+    flex: 1;    
+    padding: 1rem; 
+    background-color: #f8f9fa; 
 }
 
 #iframeContainer {
-    flex: 1 1 auto;        
+    flex: 3;        
     display: flex;
     flex-direction: column;   
 }
 
-/* #iframeContainer > header {         
-} */
-
 #iframeContainer > iframe {        
-    flex: 1 1 auto;   
-    margin: 0.25em;    
+    flex: 1;   
+    margin: 0.25rem;    
     width: 99%;      
 }
 
 #messagesContainer {
     flex: 1;
-}
-
-.splitter {    
-    width: 8px;
-    min-width: 4px;
-    border-left: 1px solid grey;
-    border-right: 1px solid grey;
-    cursor: col-resize;
 }
 
 /* @media screen and (max-width: 500px) {

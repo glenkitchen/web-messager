@@ -25,11 +25,30 @@
     </header>
     <main id="mainContent">
         <div id="formsContainer">
+            <header class="subHeader">Iframe Form</header>
+            <form>
+                <div class="form-group">
+                    <label for="rectangles">No of Rectangles</label>
+                    <input id="rectangles" type="number" class="form-control" placeholder="No of rectangles" value="3" required>
+                </div>
+                <div class="form-group">
+                    <label for="iframeUrl">IFrame Url</label>
+                    <input id="iframeUrl" type="textarea" class="form-control" value="./hosted.html" required>
+                </div>
+                <div class="form-group">
+                    <label for="iframeAction">Iframe Action</label>
+                    <select id="iframeAction" class="form-control" required>
+                        <option value="GET" selected>GET</option>
+                        <option value="POST">POST</option>
+                    </select>
+                </div>
+                <button id="loadIframe" type="button" class="primary">Load Iframe</button>
+            </form>
         </div>
         <div id="splitter1" class="splitter"></div>
         <div id="iframeContainer">
             <header class="subHeader">Iframe</header>
-            <iframe src="hosted.html" frameborder="0"></iframe>
+            <!-- <iframe src="hosted.html" frameborder="0"></iframe> -->
         </div>
         <div id="splitter2" class="splitter"></div>
         <div id="messagesContainer">
@@ -63,15 +82,6 @@
         </div>
     </main>
     <script src="./js/jquery-3.3.1.min.js"></script>
-    <script src="./js/jquery-resizable.js"></script>
-    <script>        
-        $(document).ready(function () {            
-            $('#formsContainer').resizable({
-                handleSelector: '#splitter1',
-                resizeHeight: false                
-            });
-        });
-    </script>
 </body>
 
 </html>
