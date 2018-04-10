@@ -1,9 +1,8 @@
 html, body {
-    height: 100%;    
     margin: 0;
     padding: 0;
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 95%;
+    font-family: Arial, Helvetica, sans-serif;            
+    height: 100%;    
 }
 
 body {    
@@ -12,23 +11,22 @@ body {
 }
 
 label {
-    display: inline-block; 
-    margin-bottom: 0.5rem;
+    display: inline-block;
+    margin-bottom: .5rem;
 }
 
 button {
     white-space: nowrap;      
     padding: 0.375rem 0.75rem;
     font-size: 1rem;
-    line-height: 1.5;
+    line-height: 1.5; 
     border-radius: 0.25rem;
-    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;     
     cursor: pointer;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;     
 }
 
 table {
-    width: 97%;        
-    margin-left: 2%;
+    width: 100%;         
     border-collapse: collapse;
 } 
 
@@ -37,7 +35,7 @@ th {
 }
 
 th, td {
-    padding: 0.20rem;
+    padding: .25rem .5rem; 
 }
 
 tbody > tr:nth-of-type(odd) {
@@ -50,9 +48,9 @@ tbody > tr:nth-of-type(odd) > td {
 }
 
 .primary {
-    color: #fff;
     background-color: #007bff;
     border: 1px solid #007bff;      
+    color: #fff;    
 }
 
 .primary:hover {
@@ -61,27 +59,25 @@ tbody > tr:nth-of-type(odd) > td {
 }
 
 .form-group {
-    margin-bottom: 1rem;
+    margin-bottom: .8rem; 
 } 
 
 .form-control {
-    display: block; 
-    width: 80%;   
-    padding: 0.375rem 0.75rem; 
-    font-size: 0.95rem;  
-    color: #495057;     
+    display: block;  
+    padding: 0.375rem 0.75rem;  
+    color: #495057;      
     border: 1px solid #ced4da; 
     border-radius: 0.25rem;     
 }
 
-.headerContainer {
-    padding: 0.70rem;
+.mainHeader {
+    padding: .6rem;
     background-color: black;
     color: white;       
 }
 
 .subHeader {
-    padding: 0.50rem;
+    padding: .5rem;
     background-color: grey;
     color: white;
 }
@@ -91,8 +87,8 @@ tbody > tr:nth-of-type(odd) > td {
     min-width: 2px;
     background-color: grey; 
     /* border-left: 1px solid grey;
-    border-right: 1px solid grey; */
-    /* cursor: col-resize; */
+    border-right: 1px solid grey; 
+    cursor: col-resize; */
 }
 
 #headerContainer {     
@@ -100,7 +96,7 @@ tbody > tr:nth-of-type(odd) > td {
     flex-direction: row; 
 }
 
-#mainContent {
+#mainContainer {
     flex: 1; 
     display: flex;  
 }
