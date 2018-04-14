@@ -4,40 +4,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Refresh" content="1">
+    <!-- <meta http-equiv="Refresh" content="1"> -->
     <title>Messenger Test Harness</title>
     <link rel="stylesheet" href="./cs/host.css">
 </head>
 
 <body>
-    <header id="headerContainer" class="mainHeader">
+    <header id="headerContainer">
         <div id="logo">Messenger Test Harness</div>
         <div id="controls">
             <div>
-                <input type="checkbox" id="showForms">
-                <label for="showForms">Always Show Forms</label>
+                <input type="checkbox" id="showIframeForm" checked="checked">
+                <label for="showIframeForm">Show Iframe Form</label>
             </div>
             <div>
-                <input type="checkbox" id="showMessages">
+                <input type="checkbox" id="showMessageForm" checked="checked">
+                <label for="showMessageForm">Show Message Form</label>
+            </div>
+            <div>
+                <input type="checkbox" id="showMessages" checked="checked">
                 <label for="showMessages">Show Messages</label>
             </div>
         </div>
     </header>
     <main id="mainContainer">
-        <div id="formsContainer">
+        <div id="iframeFormContainer">
             <header class="subHeader">Iframe Form</header>
             <form>
-                <div class="form-group">
+                <div class="formGroup">
                     <label for="rectangles">No of Rectangles</label>
-                    <input id="rectangles" type="number" class="form-control" placeholder="No of rectangles" value="3" required>
+                    <input id="rectangles" type="number" class="formControl" placeholder="No of rectangles" value="3" required>
                 </div>
-                <div class="form-group">
+                <div class="formGroup">
                     <label for="iframeUrl">IFrame Url</label>
-                    <input id="iframeUrl" type="textarea" class="form-control" value="./hosted.html" required>
+                    <input id="iframeUrl" type="textarea" class="formControl" value="./hosted.html" required>
                 </div>
-                <div class="form-group">
+                <div class="formGroup">
                     <label for="iframeAction">Iframe Action</label>
-                    <select id="iframeAction" class="form-control" required>
+                    <select id="iframeAction" class="formControl" required>
                         <option value="GET" selected>GET</option>
                         <option value="POST">POST</option>
                     </select>
@@ -45,43 +49,56 @@
                 <button id="loadIframe" type="button" class="primary">Load Iframe</button>
             </form>
         </div>
-        <div id="splitter1" class="splitter"></div>
+        <div class="splitter"></div>
+        <div id="messageFormContainer">
+            <header class="subHeader">Message Form</header>
+            <form>
+                <div class="formGroup">
+                    <label for="message">Message</label>
+                    <textarea id="message" cols="30" rows="10"></textarea>
+                </div>
+                <button id="loadIframe" type="button" class="primary">Send Message</button>
+            </form>
+        </div>
+        <div class="splitter"></div>
         <div id="iframeContainer">
             <header class="subHeader">Iframe</header>
             <!-- <iframe src="hosted.html" frameborder="0"></iframe> -->
         </div>
-        <div id="splitter2" class="splitter"></div>
+        <div class="splitter"></div>
         <div id="messagesContainer">
             <header class="subHeader">Messages</header>
             <table>
                 <thead>
                     <tr>
-                        <th>First</th>
-                        <th>Last</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Mark</td>
-                        <td>Otto</td>
+                        <td>David</td>
+                        <td>Kitchen</td>
                     </tr>
                     <tr>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
+                        <td>Ruth</td>
+                        <td>Kitchen</td>
                     </tr>
                     <tr>
-                        <td>Mark</td>
-                        <td>Otto</td>
+                        <td>Hannah</td>
+                        <td>Kitchen</td>
                     </tr>
                     <tr>
-                        <td>Jacob</td>
-                        <td>Thornton</td>
+                        <td>Rachel</td>
+                        <td>Kitchen</td>
                     </tr>
+
                 </tbody>
             </table>
         </div>
     </main>
     <script src="./js/jquery-3.3.1.min.js"></script>
+    <script src="./js/host.js"></script>
 </body>
 
 </html>
